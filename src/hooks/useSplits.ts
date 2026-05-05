@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { storage } from "../lib/storage";
-import { BalanceEntry, Split } from "../types";
+import { Split, SplitStatus } from "../types";
 
 export function useSplits() {
   const [splits, setSplits] = useState<Split[]>([]);
@@ -8,10 +8,16 @@ export function useSplits() {
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const data = await storage.getSplits();
-    setSplits(data);
-    setLoading(false);
-    return data;
+    try {
+      const data = await storage.getSplits();
+      setSplits(data);
+      return data;
+    } catch {
+      setSplits([]);
+      return [];
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -30,18 +36,24 @@ export function useSplits() {
     setSplits(next);
   }, []);
 
-  const markBalanceSettled = useCallback(
-    async (splitId: string, balanceId: string) => {
-      await updateSplit(splitId, (split) => {
-        const balances = split.balances.map((entry) =>
-          entry.id === balanceId ? { ...entry, settled: true } : entry
-        );
-        const status = balances.every((entry) => entry.settled) ? "settled" : "active";
-        return { ...split, balances, status };
-      });
-    },
-    [updateSplit]
-  );
+  const markBalanceSettled = useCallback(async (splitId: string, balanceId: string) => {
+    const current = await storage.getSplits();
+    const split = current.find((s) => s.id === splitId);
+    if (!split) return false;
+    const balances = Array.isArray(split.balances) ? split.balances : [];
+    const target = balances.find((b) => b.id === balanceId);
+    if (!target || target.settled) return false;
+
+    const nextBalances = balances.map((entry) =>
+      entry.id === balanceId ? { ...entry, settled: true } : entry
+    );
+    const status: SplitStatus = nextBalances.every((entry) => entry.settled) ? "settled" : "active";
+    const updatedSplit = { ...split, balances: nextBalances, status };
+    const next = current.map((s) => (s.id === splitId ? updatedSplit : s));
+    await storage.setSplits(next);
+    setSplits(next);
+    return true;
+  }, []);
 
   const activeSplits = useMemo(
     () => splits.filter((split) => split.status === "active"),
@@ -52,23 +64,11 @@ export function useSplits() {
     [splits]
   );
 
-  const outstandingTotal = useMemo(
-    () =>
-      splits.reduce((acc, split) => {
-        const remaining = split.balances
-          .filter((b: BalanceEntry) => !b.settled)
-          .reduce((sum, b) => sum + b.amount, 0);
-        return acc + remaining;
-      }, 0),
-    [splits]
-  );
-
   return {
     loading,
     splits,
     activeSplits,
     settledSplits,
-    outstandingTotal,
     refresh,
     addSplit,
     updateSplit,

@@ -1,8 +1,10 @@
 export const POINTS = {
   firstSplit: 25,
+  firstGroup: 25,
   settleEntry: 20,
   fullySettleSplit: 100,
   threeSplitsBonus: 50,
+  threeGroupsBonus: 50,
 };
 
 export const BADGE_DEFINITIONS = {
@@ -23,5 +25,17 @@ export const BADGE_DEFINITIONS = {
     name: "Group Treasurer",
     icon: "🏦",
     description: "Created three total splits.",
+  },
+  squadStarter: {
+    id: "squad-starter",
+    name: "Squad Starter",
+    icon: "👥",
+    description: "Created your first group.",
+  },
+  tripOrganizer: {
+    id: "trip-organizer",
+    name: "Trip Organizer",
+    icon: "✈️",
+    description: "Created three groups.",
   },
 };

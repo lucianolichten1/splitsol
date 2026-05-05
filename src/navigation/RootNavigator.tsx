@@ -6,18 +6,23 @@ import { SplashScreen } from "../screens/SplashScreen";
 import { CreateSplitScreen } from "../screens/CreateSplitScreen";
 import { AddExpensesScreen } from "../screens/AddExpensesScreen";
 import { SplitSummaryScreen } from "../screens/SplitSummaryScreen";
+import { CreateEditGroupScreen } from "../screens/CreateEditGroupScreen";
+import { Participant } from "../types";
 
 export type RootStackParamList = {
   Splash: undefined;
   MainTabs: undefined;
-  CreateSplit: undefined;
+  CreateSplit: { presetGroupId?: string } | undefined;
   AddExpenses: {
     name: string;
-    participants: { id: string; nickname: string }[];
+    participants: Participant[];
+    groupId: string;
+    groupName?: string;
   };
   SplitSummary: {
     splitId: string;
   };
+  CreateEditGroup: { groupId?: string; cameFrom?: "split" | "groups" } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -44,6 +49,13 @@ export function RootNavigator() {
           <Stack.Screen name="CreateSplit" component={CreateSplitScreen} options={{ title: "Create Split" }} />
           <Stack.Screen name="AddExpenses" component={AddExpensesScreen} options={{ title: "Add Expenses" }} />
           <Stack.Screen name="SplitSummary" component={SplitSummaryScreen} options={{ title: "Split Summary" }} />
+          <Stack.Screen
+            name="CreateEditGroup"
+            component={CreateEditGroupScreen}
+            options={({ route }) => ({
+              title: route.params?.groupId ? "Edit Group" : "New Group",
+            })}
+          />
         </Stack.Group>
       </Stack.Navigator>
     </NavigationContainer>

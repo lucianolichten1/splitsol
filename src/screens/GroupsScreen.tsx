@@ -1,102 +1,68 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { SplitCard } from "../components/SplitCard";
+import { GroupCard } from "../components/GroupCard";
 import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
-import { RootStackParamList } from "../navigation/RootNavigator";
-import { useProfile } from "../hooks/useProfile";
-import { useSplits } from "../hooks/useSplits";
-import { aggregateCurrentUserBalanceAcrossSplits } from "../lib/balanceSummary";
+import { useGroups } from "../hooks/useGroups";
 import { navigateRoot } from "../lib/navigateRoot";
+import { GroupsStackParamList } from "../navigation/groupsStackTypes";
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = NativeStackNavigationProp<GroupsStackParamList>;
 
 const FAB_SIZE = 60;
 
-export function HomeScreen() {
+export function GroupsScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const { activeSplits, refresh, loading } = useSplits();
-  const { profile, refreshProfile, loading: profileLoading } = useProfile();
-
-  const homeBalance = useMemo(
-    () => aggregateCurrentUserBalanceAcrossSplits(profile, activeSplits),
-    [profile, activeSplits]
-  );
-
-  const listContentStyle = useMemo(
-    () => [
-      styles.list,
-      {
-        // Scene already sits above the tab bar; pad so the last card clears the FAB.
-        paddingBottom: FAB_SIZE + spacing.xl + spacing.lg,
-      },
-    ],
-    []
-  );
+  const { groups, loading, refresh } = useGroups();
 
   useFocusEffect(
     useCallback(() => {
       refresh();
-      refreshProfile();
-    }, [refresh, refreshProfile])
+    }, [refresh])
   );
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.summary}>
-        <Text style={styles.summaryTitle}>Your balance (active splits)</Text>
-        {profileLoading && !profile ? (
-          <ActivityIndicator
-            style={styles.summaryLoading}
-            size="small"
-            color={colors.accent}
-            accessibilityLabel="Loading profile"
-          />
-        ) : (
-          <Text style={styles.summaryAmount}>{homeBalance.label}</Text>
-        )}
-      </View>
-
       <FlatList
-        data={activeSplits}
+        data={groups}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={listContentStyle}
+        contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
           loading ? (
             <View style={styles.loadingWrap}>
-              <ActivityIndicator size="large" color={colors.accent} accessibilityLabel="Loading splits" />
+              <ActivityIndicator size="large" color={colors.accent} accessibilityLabel="Loading groups" />
             </View>
           ) : (
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyTitle}>No active splits</Text>
+              <Text style={styles.emptyTitle}>No groups yet</Text>
               <Text style={styles.emptySub}>
-                Create a group, add expenses, and track who owes what. Tap + below to start.
+                Groups hold your people and past splits. Tap + to create your first group.
               </Text>
             </View>
           )
         }
         renderItem={({ item }) => (
-          <SplitCard
-            split={item}
-            onPress={() => navigateRoot(navigation, "SplitSummary", { splitId: item.id })}
+          <GroupCard
+            group={item}
+            onPress={() => navigation.navigate("GroupDetail", { groupId: item.id })}
           />
         )}
       />
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Create new split"
+        accessibilityLabel="Create new group"
         android_ripple={{ color: "#ffffff33" }}
         style={({ pressed }) => [
           styles.fab,
           { bottom: spacing.lg + Math.max(insets.bottom, 6) },
           pressed && styles.fabPressed,
         ]}
-        onPress={() => navigateRoot(navigation, "CreateSplit", {}, false)}
+        onPress={() => navigateRoot(navigation, "CreateEditGroup", { cameFrom: "groups" })}
       >
         <Text style={styles.fabText}>+</Text>
       </Pressable>
@@ -108,45 +74,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: spacing.md,
-  },
-  summary: {
-    backgroundColor: colors.surfaceElevated,
-    borderColor: colors.borderStrong,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.lg,
-    gap: spacing.xs,
-    ...shadows.cardSubtle,
-  },
-  summaryTitle: {
-    ...typography.overline,
-    fontSize: 10,
-  },
-  summaryAmount: {
-    ...typography.screenTitle,
-    fontSize: 22,
-    color: colors.accent,
-    marginTop: spacing.xs,
-    letterSpacing: -0.4,
-    lineHeight: 28,
-  },
-  summaryLoading: {
-    marginTop: spacing.md,
-    alignSelf: "flex-start",
+    paddingTop: spacing.sm,
   },
   list: {
     flexGrow: 1,
     gap: spacing.md,
+    paddingBottom: FAB_SIZE + spacing.xl + spacing.lg,
   },
   separator: {
     height: spacing.xs,
   },
   emptyWrap: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.xxl,
     alignItems: "center",
     gap: spacing.sm,
   },
@@ -165,7 +106,6 @@ const styles = StyleSheet.create({
   loadingWrap: {
     paddingVertical: spacing.xxl,
     alignItems: "center",
-    justifyContent: "center",
   },
   fab: {
     position: "absolute",

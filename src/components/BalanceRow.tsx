@@ -1,30 +1,38 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing, typography } from "../constants/theme";
+import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
+import { formatBalanceRowForViewer } from "../lib/balanceSummary";
 import { BalanceEntry, Participant } from "../types";
 
 type Props = {
   entry: BalanceEntry;
   participants: Participant[];
+  currentUserParticipantId?: string | null;
   onMarkSettled?: () => void;
 };
 
-export function BalanceRow({ entry, participants, onMarkSettled }: Props) {
-  const from = participants.find((p) => p.id === entry.from)?.nickname ?? "Unknown";
-  const to = participants.find((p) => p.id === entry.to)?.nickname ?? "Unknown";
+export function BalanceRow({ entry, participants, currentUserParticipantId, onMarkSettled }: Props) {
+  const line = formatBalanceRowForViewer(entry, participants, currentUserParticipantId ?? null);
 
   return (
-    <View style={styles.container}>
-      <View>
-        <Text style={styles.text}>
-          {from} owes {to}
+    <View style={[styles.container, entry.settled && styles.containerSettled]}>
+      <View style={styles.copy}>
+        <Text style={styles.primaryLine} numberOfLines={3}>
+          {line}
         </Text>
-        <Text style={styles.amount}>{entry.amount.toFixed(2)}</Text>
       </View>
       {entry.settled ? (
-        <Text style={styles.settled}>Settled</Text>
+        <View style={styles.settledPill}>
+          <Text style={styles.settledText}>Settled</Text>
+        </View>
       ) : (
-        <Pressable style={styles.button} onPress={onMarkSettled}>
-          <Text style={styles.buttonText}>Mark Settled</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Mark this balance as settled"
+          android_ripple={{ color: "#00000033" }}
+          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+          onPress={onMarkSettled}
+        >
+          <Text style={styles.buttonText}>Mark settled</Text>
         </Pressable>
       )}
     </View>
@@ -33,35 +41,69 @@ export function BalanceRow({ entry, participants, onMarkSettled }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.md,
+    minHeight: touch.minHeight + spacing.md,
+    ...shadows.cardSubtle,
   },
-  text: {
-    ...typography.body,
+  containerSettled: {
+    borderColor: colors.borderStrong,
+    opacity: 0.92,
+    backgroundColor: colors.surface,
   },
-  amount: {
+  copy: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.sm,
+  },
+  primaryLine: {
     ...typography.subhead,
-    color: colors.accent,
+    fontSize: 15,
+    color: colors.text,
+    fontWeight: "600",
+    lineHeight: 22,
   },
-  settled: {
-    color: colors.success,
-    fontWeight: "700",
-  },
-  button: {
-    backgroundColor: colors.primary,
+  settledPill: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
+    backgroundColor: colors.accentMuted,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    minHeight: touch.minHeight,
+    justifyContent: "center",
+  },
+  settledText: {
+    color: colors.success,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 0.4,
+  },
+  button: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    minHeight: touch.minHeight,
+    minWidth: touch.minWidth + 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  buttonPressed: {
+    opacity: 0.92,
   },
   buttonText: {
-    color: colors.text,
-    fontWeight: "700",
-    fontSize: 12,
+    color: colors.background,
+    fontWeight: "800",
+    fontSize: 14,
+    letterSpacing: 0.2,
   },
 });

@@ -1,5 +1,5 @@
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing, typography } from "../constants/theme";
+import { colors, radius, spacing, touch, typography } from "../constants/theme";
 import { Badge } from "../types";
 
 type Props = {
@@ -16,7 +16,12 @@ export function BadgePopup({ badge, onClose }: Props) {
           <Text style={styles.title}>Badge Unlocked!</Text>
           <Text style={styles.name}>{badge?.name}</Text>
           <Text style={styles.description}>{badge?.description}</Text>
-          <Pressable style={styles.button} onPress={onClose}>
+          <Pressable
+            accessibilityRole="button"
+            android_ripple={{ color: "#ffffff22" }}
+            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+            onPress={onClose}
+          >
             <Text style={styles.buttonText}>Nice</Text>
           </Pressable>
         </View>
@@ -45,24 +50,35 @@ const styles = StyleSheet.create({
     fontSize: 48,
   },
   title: {
-    ...typography.subhead,
+    ...typography.overline,
+    color: colors.accent,
   },
   name: {
-    ...typography.heading,
+    ...typography.screenTitle,
+    fontSize: 22,
+    textAlign: "center",
   },
   description: {
     ...typography.caption,
     textAlign: "center",
   },
   button: {
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
+    alignSelf: "stretch",
     backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
+    minHeight: touch.minHeight,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  buttonPressed: {
+    opacity: 0.92,
   },
   buttonText: {
     color: colors.text,
     fontWeight: "700",
+    fontSize: 16,
   },
 });
