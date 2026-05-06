@@ -2,12 +2,19 @@ import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, layout, radius, shadows, touch, typography } from "../constants/theme";
+import { colors, layout, radius, shadows, spacing, touch, typography } from "../constants/theme";
+import { useDevnetSolBalance } from "../hooks/useDevnetSolBalance";
 import { useProfile } from "../hooks/useProfile";
 import { useSplits } from "../hooks/useSplits";
 import { useWallet } from "../hooks/useWallet";
 import { resolveCurrentUserParticipantId } from "../lib/currentUserParticipant";
 import { truncateWalletAddress } from "../lib/truncateWalletAddress";
+
+function formatSolDisplay(sol: number): string {
+  if (!Number.isFinite(sol)) return "—";
+  const s = sol.toFixed(6).replace(/\.?0+$/, "");
+  return s.length > 0 ? s : "0";
+}
 
 export function WalletScreen() {
   const { profile, loading: profileLoading, refreshProfile, updateProfile } = useProfile();
@@ -16,11 +23,24 @@ export function WalletScreen() {
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [personFilter, setPersonFilter] = useState<string>("all");
 
+  const connectedAddress = profile?.mockWalletAddress?.trim() ?? "";
+  const isWalletConnected = connectedAddress.length > 0;
+  const {
+    solBalance,
+    loading: solLoading,
+    refreshing: solRefreshing,
+    error: solError,
+    refresh: refreshDevnetSol,
+  } = useDevnetSolBalance(connectedAddress);
+
   useFocusEffect(
     useCallback(() => {
       refresh();
       refreshProfile();
-    }, [refresh, refreshProfile])
+      if (connectedAddress) {
+        void refreshDevnetSol();
+      }
+    }, [refresh, refreshProfile, connectedAddress, refreshDevnetSol])
   );
 
   const groupOptions = useMemo(() => {
@@ -95,9 +115,6 @@ export function WalletScreen() {
     };
   }, [filteredSplits, profile]);
 
-  const connectedAddress = profile?.mockWalletAddress?.trim() ?? "";
-  const isWalletConnected = connectedAddress.length > 0;
-
   if (profileLoading || splitsLoading) {
     return (
       <SafeAreaView style={styles.centered} edges={["top"]}>
@@ -141,8 +158,39 @@ export function WalletScreen() {
               {truncateWalletAddress(connectedAddress)}
             </Text>
           ) : null}
-          <Text style={styles.muted}>Wallet balance: Coming in Phase 2</Text>
-          <Text style={styles.muted}>Devnet SOL balance: Coming in Phase 2</Text>
+          {!isWalletConnected ? (
+            <>
+              <Text style={styles.muted}>Wallet balance: Coming in Phase 2</Text>
+              <Text style={styles.muted}>Devnet SOL: connect a wallet to load from devnet.</Text>
+            </>
+          ) : (
+            <View style={styles.solBlock}>
+              <Text style={styles.muted}>Devnet SOL</Text>
+              {solLoading && solBalance === null && !solError ? (
+                <View style={styles.solLoadingRow}>
+                  <ActivityIndicator size="small" color={colors.accentStrong} accessibilityLabel="Loading devnet balance" />
+                  <Text style={styles.muted}>Loading balance…</Text>
+                </View>
+              ) : solError ? (
+                <Text style={styles.errorText}>{solError}</Text>
+              ) : solBalance !== null ? (
+                <Text style={styles.solAmount}>{formatSolDisplay(solBalance)} SOL</Text>
+              ) : null}
+              <View style={styles.solActions}>
+                <Pressable
+                  style={[styles.refreshBtn, (solRefreshing || solLoading) && styles.btnDisabled]}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: solRefreshing || solLoading }}
+                  disabled={solRefreshing || solLoading}
+                  onPress={() => {
+                    void refreshDevnetSol();
+                  }}
+                >
+                  <Text style={styles.refreshBtnText}>{solRefreshing ? "Refreshing…" : "Refresh"}</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
           {walletError ? <Text style={styles.errorText}>{walletError}</Text> : null}
           {isWalletConnected ? (
             <Pressable
@@ -165,7 +213,10 @@ export function WalletScreen() {
               disabled={connecting || disconnecting}
               onPress={() => {
                 clearWalletError();
-                void connect();
+                void (async () => {
+                  const ok = await connect();
+                  if (ok) void refreshDevnetSol();
+                })();
               }}
             >
               <Text style={styles.connectBtnText}>{connecting ? "Connecting…" : "Connect Wallet"}</Text>
@@ -313,6 +364,41 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.error,
     lineHeight: 18,
+  },
+  solBlock: {
+    gap: layout.inline,
+  },
+  solLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  solAmount: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: "700",
+    fontSize: 20,
+  },
+  solActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  refreshBtn: {
+    alignSelf: "flex-start",
+    minHeight: touch.minHeight - 10,
+    paddingHorizontal: layout.cardPaddingDense,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderStyle: "dashed",
+    backgroundColor: colors.surfaceElevated,
+    justifyContent: "center",
+  },
+  refreshBtnText: {
+    ...typography.caption,
+    color: colors.textMuted,
+    fontWeight: "700",
+    fontSize: 12,
   },
   card: {
     backgroundColor: colors.surface,

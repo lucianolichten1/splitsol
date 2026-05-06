@@ -18,11 +18,11 @@ export function useWallet(updateProfile: WalletProfileUpdater) {
 
   const clearWalletError = useCallback(() => setWalletError(null), []);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (): Promise<boolean> => {
     setWalletError(null);
     if (Platform.OS !== "android") {
       setWalletError("Wallet connect is only available on Android.");
-      return;
+      return false;
     }
     setConnecting(true);
     try {
@@ -41,8 +41,10 @@ export function useWallet(updateProfile: WalletProfileUpdater) {
         await storage.setWalletAuthToken(authorizationResult.auth_token);
         await updateProfile({ mockWalletAddress: base58 });
       });
+      return true;
     } catch (e) {
       setWalletError(mapWalletConnectError(e));
+      return false;
     } finally {
       setConnecting(false);
     }
