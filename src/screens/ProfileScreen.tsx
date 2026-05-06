@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, layout, radius, shadows, touch, typography } from "../constants/theme";
 import { useProfile } from "../hooks/useProfile";
+import { truncateWalletAddress } from "../lib/truncateWalletAddress";
 import { ProfileStackParamList } from "../navigation/profileStackTypes";
 
 type Props = NativeStackScreenProps<ProfileStackParamList, "ProfileHome">;
@@ -71,7 +72,11 @@ export function ProfileScreen({ navigation }: Props) {
 
         <View style={styles.rowCard}>
           <Text style={styles.rowLabel}>Wallet</Text>
-          <Text style={styles.rowValueMuted}>{profile.mockWalletAddress?.trim() || "not connected"}</Text>
+          <Text style={styles.rowValueMuted} selectable>
+            {profile.mockWalletAddress?.trim()
+              ? truncateWalletAddress(profile.mockWalletAddress.trim())
+              : "not connected"}
+          </Text>
         </View>
 
         <Text style={styles.settingsTitle}>Settings</Text>

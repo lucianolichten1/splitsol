@@ -5,10 +5,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, layout, radius, shadows, touch, typography } from "../constants/theme";
 import { useProfile } from "../hooks/useProfile";
 import { useSplits } from "../hooks/useSplits";
+import { useWallet } from "../hooks/useWallet";
 import { resolveCurrentUserParticipantId } from "../lib/currentUserParticipant";
+import { truncateWalletAddress } from "../lib/truncateWalletAddress";
 
 export function WalletScreen() {
-  const { profile, loading: profileLoading, refreshProfile } = useProfile();
+  const { profile, loading: profileLoading, refreshProfile, updateProfile } = useProfile();
+  const { connecting, disconnecting, walletError, clearWalletError, connect, disconnect } = useWallet(updateProfile);
   const { splits, loading: splitsLoading, refresh } = useSplits();
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [personFilter, setPersonFilter] = useState<string>("all");
@@ -92,6 +95,9 @@ export function WalletScreen() {
     };
   }, [filteredSplits, profile]);
 
+  const connectedAddress = profile?.mockWalletAddress?.trim() ?? "";
+  const isWalletConnected = connectedAddress.length > 0;
+
   if (profileLoading || splitsLoading) {
     return (
       <SafeAreaView style={styles.centered} edges={["top"]}>
@@ -126,13 +132,45 @@ export function WalletScreen() {
         </View>
 
         <View style={styles.connectCard}>
-          <Text style={styles.connectTitle}>Not connected yet</Text>
-          <Text style={styles.muted}>Wallet status: Not connected</Text>
+          <Text style={styles.connectTitle}>{isWalletConnected ? "Wallet connected" : "Not connected yet"}</Text>
+          <Text style={styles.muted}>
+            Wallet status: {isWalletConnected ? "Connected · Solana devnet" : "Not connected"}
+          </Text>
+          {isWalletConnected ? (
+            <Text style={styles.addressLine} selectable>
+              {truncateWalletAddress(connectedAddress)}
+            </Text>
+          ) : null}
           <Text style={styles.muted}>Wallet balance: Coming in Phase 2</Text>
           <Text style={styles.muted}>Devnet SOL balance: Coming in Phase 2</Text>
-          <Pressable style={styles.connectBtn} accessibilityRole="button">
-            <Text style={styles.connectBtnText}>Connect Wallet</Text>
-          </Pressable>
+          {walletError ? <Text style={styles.errorText}>{walletError}</Text> : null}
+          {isWalletConnected ? (
+            <Pressable
+              style={[styles.connectBtn, (connecting || disconnecting) && styles.btnDisabled]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: connecting || disconnecting }}
+              disabled={connecting || disconnecting}
+              onPress={() => {
+                clearWalletError();
+                void disconnect();
+              }}
+            >
+              <Text style={styles.connectBtnText}>{disconnecting ? "Disconnecting…" : "Disconnect Wallet"}</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={[styles.connectBtn, (connecting || disconnecting) && styles.btnDisabled]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: connecting || disconnecting }}
+              disabled={connecting || disconnecting}
+              onPress={() => {
+                clearWalletError();
+                void connect();
+              }}
+            >
+              <Text style={styles.connectBtnText}>{connecting ? "Connecting…" : "Connect Wallet"}</Text>
+            </Pressable>
+          )}
         </View>
 
         <Text style={styles.sectionTitle}>The numbers</Text>
@@ -263,6 +301,18 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     fontWeight: "700",
+  },
+  btnDisabled: { opacity: 0.55 },
+  addressLine: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  errorText: {
+    ...typography.caption,
+    color: colors.error,
+    lineHeight: 18,
   },
   card: {
     backgroundColor: colors.surface,

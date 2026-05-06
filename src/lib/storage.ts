@@ -7,6 +7,8 @@ const KEYS = {
   groups: "splitsol:groups",
   profile: "splitsol:profile",
   friends: "splitsol:friends",
+  /** MWA auth token for silent re-authorize; local only */
+  walletAuthToken: "splitsol:walletAuthToken",
 } as const;
 
 async function getJSON<T>(key: string, fallback: T): Promise<T> {
@@ -67,4 +69,12 @@ export const storage = {
   setFriends: (friends: Friend[]) => setJSON(KEYS.friends, friends),
   updateFriends: (updater: (friends: Friend[]) => Friend[]) =>
     updateJSON<Friend[]>(KEYS.friends, [], updater),
+
+  getWalletAuthToken: async (): Promise<string | null> => AsyncStorage.getItem(KEYS.walletAuthToken),
+  setWalletAuthToken: async (token: string): Promise<void> => {
+    await AsyncStorage.setItem(KEYS.walletAuthToken, token);
+  },
+  clearWalletAuthToken: async (): Promise<void> => {
+    await AsyncStorage.removeItem(KEYS.walletAuthToken);
+  },
 };
