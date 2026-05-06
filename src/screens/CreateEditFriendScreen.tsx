@@ -14,9 +14,12 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
 import { useFriends } from "../hooks/useFriends";
-import { ProfileStackParamList } from "../navigation/profileStackTypes";
 
-type Props = NativeStackScreenProps<ProfileStackParamList, "CreateEditFriend">;
+type FriendEditorParamList = {
+  CreateEditFriend: { friendId?: string } | undefined;
+};
+
+type Props = NativeStackScreenProps<FriendEditorParamList, "CreateEditFriend">;
 
 export function CreateEditFriendScreen({ navigation, route }: Props) {
   const friendId = route.params?.friendId;
@@ -40,8 +43,12 @@ export function CreateEditFriendScreen({ navigation, route }: Props) {
   }, [friendId, friends, refresh]);
 
   const save = async () => {
-    if (!displayName.trim() || !username.trim()) {
-      Alert.alert("Required", "Display name and username cannot be empty.");
+    if (!displayName.trim()) {
+      Alert.alert("Display name required", "Enter how you’ll recognize this person in your groups.");
+      return;
+    }
+    if (!username.trim()) {
+      Alert.alert("Username required", "Add a handle (letters, numbers). Used to match them later—no @ needed in the field.");
       return;
     }
     try {
@@ -100,16 +107,17 @@ export function CreateEditFriendScreen({ navigation, route }: Props) {
           <TextInput
             value={displayName}
             onChangeText={setDisplayName}
-            placeholder="Friend's name"
+            placeholder="e.g. Alex Kim"
             placeholderTextColor={colors.textDim}
             style={styles.input}
           />
 
           <Text style={styles.label}>Username</Text>
+          <Text style={styles.hint}>Lowercase handle, no spaces. Shown as @handle in the app.</Text>
           <TextInput
             value={username}
             onChangeText={setUsername}
-            placeholder="handle"
+            placeholder="e.g. alexkim"
             placeholderTextColor={colors.textDim}
             style={styles.input}
             autoCapitalize="none"
@@ -117,11 +125,11 @@ export function CreateEditFriendScreen({ navigation, route }: Props) {
           />
 
           <Text style={styles.label}>Wallet address (optional)</Text>
-          <Text style={styles.hint}>For future lookup by wallet. Stored locally only.</Text>
+          <Text style={styles.hint}>Optional for now. For future payouts—stored only on this device.</Text>
           <TextInput
             value={walletAddress}
             onChangeText={setWalletAddress}
-            placeholder="Solana address (optional)"
+            placeholder="Paste Solana address if you have it"
             placeholderTextColor={colors.textDim}
             style={styles.input}
             autoCapitalize="none"

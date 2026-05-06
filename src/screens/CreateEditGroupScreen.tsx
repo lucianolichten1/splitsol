@@ -17,13 +17,11 @@ import { colors, radius, shadows, spacing, touch, typography } from "../constant
 import { useFriends } from "../hooks/useFriends";
 import { useGroups } from "../hooks/useGroups";
 import { useProfile } from "../hooks/useProfile";
-import { useRewards } from "../hooks/useRewards";
 import {
   ensureCurrentUserInMembers,
   makeSelfParticipant,
   participantMatchesProfile,
 } from "../lib/currentUserParticipant";
-import { storage } from "../lib/storage";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { Friend, Group, Participant } from "../types";
 
@@ -35,8 +33,6 @@ export function CreateEditGroupScreen({ navigation, route }: Props) {
   const { getGroupById, addGroup, updateGroup, refresh } = useGroups();
   const { friends, refresh: refreshFriends } = useFriends();
   const { profile, refreshProfile, getProfile } = useProfile();
-  const { checkAndAwardRewards } = useRewards();
-
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [memberInput, setMemberInput] = useState("");
@@ -126,15 +122,22 @@ export function CreateEditGroupScreen({ navigation, route }: Props) {
 
   const save = async () => {
     if (!name.trim()) {
-      Alert.alert("Name required", "Please enter a group name.");
+      Alert.alert("Group name required", "Enter a name for this group so you can find it later.");
       return;
     }
     const now = new Date().toISOString();
 
     const profileData = profile ?? (await getProfile());
+    const membersWithSelf = ensureCurrentUserInMembers(members, profileData);
+    if (membersWithSelf.length < 2) {
+      Alert.alert(
+        "Need at least 2 members",
+        "You’re always included. Add at least one other person (friend or nickname) so you can split expenses."
+      );
+      return;
+    }
 
     if (isEdit) {
-      const membersWithSelf = ensureCurrentUserInMembers(members, profileData);
       await updateGroup(groupId, (g) => ({
         ...g,
         name: name.trim(),
@@ -146,8 +149,6 @@ export function CreateEditGroupScreen({ navigation, route }: Props) {
       return;
     }
 
-    const membersWithSelf = ensureCurrentUserInMembers(members, profileData);
-
     const newGroup: Group = {
       id: `g-${Date.now()}`,
       name: name.trim(),
@@ -157,8 +158,6 @@ export function CreateEditGroupScreen({ navigation, route }: Props) {
       updatedAt: now,
     };
     await addGroup(newGroup);
-    const allGroups = await storage.getGroups();
-    await checkAndAwardRewards("group_created", { groups: allGroups });
 
     if (cameFrom === "split") {
       navigation.navigate({
@@ -199,7 +198,8 @@ export function CreateEditGroupScreen({ navigation, route }: Props) {
 
           <Text style={styles.label}>Members</Text>
           <Text style={styles.hint}>
-            Add people from your friends list (snapshotted) or type a one-off nickname.
+            You appear as <Text style={styles.hintBold}>Me</Text>—always in the group and not removable. Add at least one
+            other person via friends or a manual nickname (need 2+ people total to split).
           </Text>
 
           <Text style={styles.subLabel}>From friends</Text>
@@ -316,6 +316,10 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textDim,
     lineHeight: 18,
+  },
+  hintBold: {
+    color: colors.accent,
+    fontWeight: "700",
   },
   subLabel: {
     ...typography.overline,

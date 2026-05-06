@@ -1,11 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createDefaultUserProfile } from "./defaultProfile";
-import { Friend, Group, RewardsProfile, Split, UserProfile } from "../types";
+import { Friend, Group, Split, UserProfile } from "../types";
 
 const KEYS = {
   splits: "splitsol:splits",
   groups: "splitsol:groups",
-  rewards: "splitsol:rewards",
   profile: "splitsol:profile",
   friends: "splitsol:friends",
 } as const;
@@ -45,11 +44,6 @@ export const storage = {
   setGroups: (groups: Group[]) => setJSON(KEYS.groups, groups),
   updateGroups: (updater: (groups: Group[]) => Group[]) =>
     updateJSON<Group[]>(KEYS.groups, [], updater),
-  getRewards: () =>
-    getJSON<RewardsProfile>(KEYS.rewards, { totalPoints: 0, badges: [] }),
-  setRewards: (profile: RewardsProfile) => setJSON(KEYS.rewards, profile),
-  updateRewards: (updater: (profile: RewardsProfile) => RewardsProfile) =>
-    updateJSON<RewardsProfile>(KEYS.rewards, { totalPoints: 0, badges: [] }, updater),
 
   getProfile: () => getJSON<UserProfile | null>(KEYS.profile, null),
   setProfile: (profile: UserProfile) => setJSON(KEYS.profile, profile),

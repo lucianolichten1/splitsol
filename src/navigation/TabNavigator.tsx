@@ -1,40 +1,37 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import { Platform, StyleSheet } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { HistoryScreen } from "../screens/HistoryScreen";
-import { HomeScreen } from "../screens/HomeScreen";
-import { colors, spacing, typography } from "../constants/theme";
+import { colors, layout, radius, typography } from "../constants/theme";
+import { TransactionsScreen } from "../screens/TransactionsScreen";
+import { WalletScreen } from "../screens/WalletScreen";
 import { GroupsStack } from "./GroupsStack";
 import { ProfileStack } from "./ProfileStack";
 
 export type MainTabParamList = {
-  Groups: undefined;
-  Splits: undefined;
-  History: undefined;
+  FriendsGroups: undefined;
+  Transactions: undefined;
+  Wallet: undefined;
   Profile: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-/** Space for icon + label row inside the bar (below paddingTop, above safe inset) */
-const TAB_INNER_ROW = Platform.OS === "android" ? 58 : 54;
+const TAB_INNER_ROW = Platform.OS === "android" ? 64 : 58;
 
 export function TabNavigator() {
   const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, Platform.OS === "android" ? 8 : 0);
-  const paddingTop = spacing.sm;
-  /** Total bar height; explicit height overrides React Navigation’s default (~49 + inset) so icons + labels fit on Android. */
+  const bottomInset = Math.max(insets.bottom, Platform.OS === "android" ? 8 : 4);
+  const paddingTop = layout.stack;
   const tabBarHeight = paddingTop + TAB_INNER_ROW + bottomInset;
 
-  // Bottom inset is applied once in tabBarStyle (avoids stacking with tab bar’s default inset).
   return (
     <Tab.Navigator
       safeAreaInsets={{ bottom: 0 }}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarActiveTintColor: colors.background,
+        tabBarInactiveTintColor: colors.textDim,
         tabBarHideOnKeyboard: true,
         tabBarShowLabel: true,
         tabBarStyle: {
@@ -44,53 +41,64 @@ export function TabNavigator() {
           height: tabBarHeight,
           paddingTop,
           paddingBottom: bottomInset,
-          paddingHorizontal: spacing.xs,
-          elevation: 8,
+          paddingHorizontal: layout.inline,
+          elevation: 10,
         },
         tabBarItemStyle: {
           paddingVertical: 0,
           justifyContent: "center",
           alignItems: "center",
+          minHeight: 48,
+          borderRadius: radius.pill,
+          marginHorizontal: 4,
         },
+        tabBarActiveBackgroundColor: "transparent",
         tabBarIconStyle: {
           marginBottom: 2,
         },
         tabBarLabelStyle: {
           ...typography.caption,
           fontSize: 11,
-          fontWeight: "600",
+          fontWeight: "700",
           marginBottom: 0,
           marginTop: 0,
         },
+        tabBarBackground: () => <View style={{ flex: 1, backgroundColor: colors.surface }} />,
       }}
     >
       <Tab.Screen
-        name="Groups"
+        name="FriendsGroups"
         component={GroupsStack}
         options={{
-          tabBarLabel: "Groups",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size ?? 24} color={color} />
+          tabBarLabel: "People",
+          tabBarIcon: ({ color, size, focused }) => (
+            <View style={[styles.iconCircle, focused && styles.iconCircleActive]}>
+              <Ionicons name="people-outline" size={size ?? 22} color={focused ? colors.background : color} />
+            </View>
           ),
         }}
       />
       <Tab.Screen
-        name="Splits"
-        component={HomeScreen}
+        name="Transactions"
+        component={TransactionsScreen}
         options={{
-          tabBarLabel: "Splits",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="albums-outline" size={size ?? 24} color={color} />
+          tabBarLabel: "Transactions",
+          tabBarIcon: ({ color, size, focused }) => (
+            <View style={[styles.iconCircle, focused && styles.iconCircleActive]}>
+              <Ionicons name="reader-outline" size={size ?? 22} color={focused ? colors.background : color} />
+            </View>
           ),
         }}
       />
       <Tab.Screen
-        name="History"
-        component={HistoryScreen}
+        name="Wallet"
+        component={WalletScreen}
         options={{
-          tabBarLabel: "History",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time-outline" size={size ?? 24} color={color} />
+          tabBarLabel: "Wallet",
+          tabBarIcon: ({ color, size, focused }) => (
+            <View style={[styles.iconCircle, focused && styles.iconCircleActive]}>
+              <Ionicons name="wallet-outline" size={size ?? 22} color={focused ? colors.background : color} />
+            </View>
           ),
         }}
       />
@@ -98,12 +106,27 @@ export function TabNavigator() {
         name="Profile"
         component={ProfileStack}
         options={{
-          tabBarLabel: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-circle-outline" size={size ?? 24} color={color} />
+          tabBarLabel: "Me",
+          tabBarIcon: ({ color, size, focused }) => (
+            <View style={[styles.iconCircle, focused && styles.iconCircleActive]}>
+              <Ionicons name="person-circle-outline" size={size ?? 22} color={focused ? colors.background : color} />
+            </View>
           ),
         }}
       />
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  iconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconCircleActive: {
+    backgroundColor: colors.accent,
+  },
+});

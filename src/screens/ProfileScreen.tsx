@@ -1,17 +1,9 @@
 import { useCallback } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
-import { useFriends } from "../hooks/useFriends";
+import { colors, layout, radius, shadows, touch, typography } from "../constants/theme";
 import { useProfile } from "../hooks/useProfile";
 import { ProfileStackParamList } from "../navigation/profileStackTypes";
 
@@ -33,53 +25,68 @@ function truncateId(id: string): string {
 
 export function ProfileScreen({ navigation }: Props) {
   const { profile, loading, refreshProfile } = useProfile();
-  const { friends, loading: friendsLoading, refresh: refreshFriends } = useFriends();
 
   useFocusEffect(
     useCallback(() => {
       refreshProfile();
-      refreshFriends();
-    }, [refreshProfile, refreshFriends])
+    }, [refreshProfile])
   );
 
   if (loading || !profile) {
     return (
       <SafeAreaView style={styles.centered} edges={["top"]}>
-        <ActivityIndicator size="large" color={colors.accent} accessibilityLabel="Loading profile" />
+        <ActivityIndicator size="large" color={colors.accentStrong} accessibilityLabel="Loading profile" />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.pageTitle}>Me</Text>
+            <Text style={styles.pageSubtitle}>identity + settings</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            android_ripple={{ color: "#ffffff22" }}
+            style={({ pressed }) => [styles.editPill, pressed && { opacity: 0.94 }]}
+            onPress={() => navigation.navigate("EditProfile")}
+          >
+            <Text style={styles.editPillText}>edit</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{profileInitials(profile.displayName)}</Text>
           </View>
           <Text style={styles.displayName}>{profile.displayName}</Text>
           <Text style={styles.username}>@{profile.username}</Text>
-        </View>
-
-        <View style={styles.rowCard}>
-          <Text style={styles.rowLabel}>User ID</Text>
-          <Text style={styles.rowValue} selectable>
-            {truncateId(profile.id)}
-          </Text>
+          <View style={styles.idChip}>
+            <Text style={styles.idChipText}>id · {truncateId(profile.id)}</Text>
+          </View>
         </View>
 
         <View style={styles.rowCard}>
           <Text style={styles.rowLabel}>Wallet</Text>
-          <Text style={styles.rowValueMuted}>
-            {profile.mockWalletAddress?.trim() || "Not connected yet"}
-          </Text>
+          <Text style={styles.rowValueMuted}>{profile.mockWalletAddress?.trim() || "not connected"}</Text>
         </View>
 
-        <Text style={styles.phaseNote}>Wallet connection coming in Phase 2.</Text>
+        <Text style={styles.settingsTitle}>Settings</Text>
+        <View style={styles.rowCard}>
+          <Text style={styles.rowLabel}>Appearance</Text>
+          <Text style={styles.rowValueMuted}>dark · auto</Text>
+        </View>
+        <View style={styles.rowCard}>
+          <Text style={styles.rowLabel}>Notifications</Text>
+          <Text style={styles.rowValueMuted}>on</Text>
+        </View>
+        <View style={styles.rowCard}>
+          <Text style={styles.rowLabel}>Default currency</Text>
+          <Text style={styles.rowValueMuted}>USD</Text>
+        </View>
 
         <Pressable
           accessibilityRole="button"
@@ -89,53 +96,6 @@ export function ProfileScreen({ navigation }: Props) {
         >
           <Text style={styles.primaryBtnText}>Edit profile</Text>
         </Pressable>
-
-        <Pressable
-          accessibilityRole="button"
-          android_ripple={{ color: "#ffffff22" }}
-          style={({ pressed }) => [styles.secondaryBtn, pressed && { opacity: 0.92 }]}
-          onPress={() => navigation.navigate("Rewards")}
-        >
-          <Text style={styles.secondaryBtnText}>Rewards</Text>
-        </Pressable>
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>My friends</Text>
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={12}
-            onPress={() => navigation.navigate("CreateEditFriend", {})}
-          >
-            <Text style={styles.addLink}>+ Add</Text>
-          </Pressable>
-        </View>
-
-        {friendsLoading ? (
-          <ActivityIndicator color={colors.accent} style={styles.friendsLoading} />
-        ) : friends.length === 0 ? (
-          <Text style={styles.emptyFriends}>No saved friends yet. Add people you split with often.</Text>
-        ) : (
-          <View style={styles.friendList}>
-            {friends.map((f) => (
-              <Pressable
-                key={f.id}
-                accessibilityRole="button"
-                android_ripple={{ color: "#ffffff18" }}
-                style={({ pressed }) => [styles.friendRow, pressed && { opacity: 0.92 }]}
-                onPress={() => navigation.navigate("CreateEditFriend", { friendId: f.id })}
-              >
-                <View style={styles.friendAvatar}>
-                  <Text style={styles.friendAvatarText}>{profileInitials(f.displayName)}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.friendName}>{f.displayName}</Text>
-                  <Text style={styles.friendMeta}>@{f.username}</Text>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -153,80 +113,118 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   scroll: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xxl,
-    gap: spacing.md,
+    paddingHorizontal: layout.screenPaddingH,
+    paddingTop: layout.screenPaddingV,
+    paddingBottom: layout.scrollBottom,
+    gap: layout.block,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  pageTitle: {
+    ...typography.screenTitle,
+  },
+  pageSubtitle: {
+    ...typography.caption,
+    marginTop: -layout.titleGap,
+    fontStyle: "italic",
+  },
+  editPill: {
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderStyle: "dashed",
+    backgroundColor: colors.surface,
+    borderRadius: radius.pill,
+    minHeight: touch.minHeight - 6,
+    paddingHorizontal: layout.cardPadding,
+    justifyContent: "center",
+  },
+  editPillText: {
+    ...typography.caption,
+    color: colors.text,
+    fontWeight: "700",
   },
   profileCard: {
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: colors.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.borderStrong,
-    padding: spacing.lg,
+    borderStyle: "dashed",
+    padding: layout.section,
     alignItems: "center",
-    gap: spacing.sm,
+    gap: layout.stack,
     ...shadows.card,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.accentMuted,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 3,
-    borderColor: "rgba(20, 241, 149, 0.35)",
   },
   avatarText: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: colors.accent,
-    letterSpacing: -0.5,
+    fontSize: 40,
+    fontWeight: "700",
+    color: colors.background,
+    letterSpacing: -0.7,
   },
   displayName: {
-    ...typography.screenTitle,
-    fontSize: 22,
+    ...typography.heading,
+    fontSize: 44,
+    fontWeight: "500",
   },
   username: {
     ...typography.body,
     color: colors.textMuted,
     fontWeight: "600",
   },
-  rowCard: {
+  idChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: "dashed",
+    borderRadius: radius.pill,
+    paddingHorizontal: layout.cardPadding,
+    paddingVertical: layout.inline,
     backgroundColor: colors.surfaceElevated,
+  },
+  idChipText: {
+    ...typography.caption,
+    color: colors.textDim,
+    fontWeight: "600",
+  },
+  rowCard: {
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    gap: spacing.xs,
+    borderStyle: "dashed",
+    paddingHorizontal: layout.cardPadding,
+    paddingVertical: layout.cardPadding,
+    gap: layout.inline,
     ...shadows.cardSubtle,
   },
   rowLabel: {
     ...typography.overline,
-    fontSize: 11,
-  },
-  rowValue: {
-    ...typography.body,
-    fontWeight: "600",
-    fontSize: 15,
+    fontSize: 10,
   },
   rowValueMuted: {
     ...typography.body,
     color: colors.textMuted,
     fontWeight: "600",
   },
-  phaseNote: {
-    ...typography.caption,
-    color: colors.textDim,
-    lineHeight: 18,
-    paddingHorizontal: spacing.xs,
+  settingsTitle: {
+    ...typography.heading,
+    fontSize: 34,
+    fontWeight: "500",
+    marginTop: layout.stack,
   },
   primaryBtn: {
     backgroundColor: colors.accent,
     borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
+    paddingVertical: layout.section,
     alignItems: "center",
     minHeight: touch.minHeight + 6,
     justifyContent: "center",
@@ -237,88 +235,5 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 16,
     letterSpacing: 0.2,
-  },
-  secondaryBtn: {
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    minHeight: touch.minHeight + 2,
-    justifyContent: "center",
-    ...shadows.cardSubtle,
-  },
-  secondaryBtnText: {
-    color: colors.text,
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing.sm,
-  },
-  sectionTitle: {
-    ...typography.overline,
-    fontSize: 12,
-  },
-  addLink: {
-    color: colors.accent,
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  friendsLoading: {
-    marginVertical: spacing.lg,
-  },
-  emptyFriends: {
-    ...typography.caption,
-    color: colors.textMuted,
-    lineHeight: 20,
-  },
-  friendList: {
-    gap: spacing.sm,
-  },
-  friendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    minHeight: touch.minHeight + 8,
-    ...shadows.cardSubtle,
-  },
-  friendAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primaryMuted,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-  },
-  friendAvatarText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.primary,
-  },
-  friendName: {
-    ...typography.body,
-    fontWeight: "700",
-  },
-  friendMeta: {
-    ...typography.caption,
-    color: colors.textMuted,
-  },
-  chevron: {
-    fontSize: 22,
-    color: colors.textMuted,
-    fontWeight: "300",
   },
 });

@@ -28,11 +28,17 @@ export interface Friend {
   updatedAt: string;
 }
 
+export type ExpenseSplitMode = "equal" | "percentage";
+
 export interface Expense {
   id: string;
   description: string;
   amount: number;
   paidBy: string;
+  /** Defaults to equal split when omitted (existing data). */
+  splitMode?: ExpenseSplitMode;
+  /** Participant id → percent 0–100; used when `splitMode` is `"percentage"`. */
+  participantPercents?: Record<string, number>;
 }
 
 export interface BalanceEntry {
@@ -44,7 +50,9 @@ export interface BalanceEntry {
   txHash?: string;
 }
 
-export type SplitStatus = "active" | "settled";
+export type SplitStatus = "active" | "pending" | "disputed" | "settled";
+
+export type ParticipantConfirmationStatus = "pending" | "accepted" | "disputed";
 
 export interface Group {
   id: string;
@@ -69,23 +77,7 @@ export interface Split {
   balances: BalanceEntry[];
   status: SplitStatus;
   totalAmount: number;
+  /** Local pre-phase-2 acknowledgement status by participant id */
+  participantConfirmations?: Record<string, ParticipantConfirmationStatus>;
 }
 
-export interface Badge {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
-  earnedAt: string;
-}
-
-export interface RewardsProfile {
-  totalPoints: number;
-  badges: Badge[];
-}
-
-export type RewardAction =
-  | "split_created"
-  | "balance_settled"
-  | "split_fully_settled"
-  | "group_created";

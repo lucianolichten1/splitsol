@@ -1,0 +1,309 @@
+import { useCallback, useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { colors, layout, radius, shadows, touch, typography } from "../constants/theme";
+import { useProfile } from "../hooks/useProfile";
+import { useSplits } from "../hooks/useSplits";
+import { resolveCurrentUserParticipantId } from "../lib/currentUserParticipant";
+
+export function WalletScreen() {
+  const { profile, loading: profileLoading, refreshProfile } = useProfile();
+  const { splits, loading: splitsLoading, refresh } = useSplits();
+  const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [personFilter, setPersonFilter] = useState<string>("all");
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+      refreshProfile();
+    }, [refresh, refreshProfile])
+  );
+
+  const groupOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const split of splits) {
+      if (split.groupId) map.set(split.groupId, split.groupName || "Unnamed group");
+      else map.set("direct", "Direct");
+    }
+    return [{ id: "all", label: "All groups" }, ...Array.from(map.entries()).map(([id, label]) => ({ id, label }))];
+  }, [splits]);
+
+  const personOptions = useMemo(() => {
+    if (!profile) return [{ id: "all", label: "All people" }];
+    const map = new Map<string, string>();
+    for (const split of splits) {
+      const me = resolveCurrentUserParticipantId(split.participants, profile);
+      for (const p of split.participants) {
+        if (p.id === me) continue;
+        map.set(p.id, p.nickname);
+      }
+    }
+    return [{ id: "all", label: "All people" }, ...Array.from(map.entries()).map(([id, label]) => ({ id, label }))];
+  }, [splits, profile]);
+
+  const filteredSplits = useMemo(() => {
+    if (!profile) return [];
+    return splits.filter((split) => {
+      if (groupFilter !== "all") {
+        if (groupFilter === "direct" && split.groupId) return false;
+        if (groupFilter !== "direct" && split.groupId !== groupFilter) return false;
+      }
+      if (personFilter !== "all") {
+        const me = resolveCurrentUserParticipantId(split.participants, profile);
+        if (!split.participants.some((p) => p.id === personFilter && p.id !== me)) return false;
+      }
+      return true;
+    });
+  }, [splits, profile, groupFilter, personFilter]);
+
+  const stats = useMemo(() => {
+    if (!profile) {
+      return { owed: 0, owe: 0, net: 0, pending: 0, active: 0, disputed: 0, settled: 0 };
+    }
+    let owed = 0;
+    let owe = 0;
+    let pending = 0;
+    let active = 0;
+    let disputed = 0;
+    let settled = 0;
+    for (const split of filteredSplits) {
+      const me = resolveCurrentUserParticipantId(split.participants, profile);
+      for (const balance of split.balances ?? []) {
+        if (balance.settled || !me) continue;
+        if (balance.to === me) owed += balance.amount;
+        if (balance.from === me) owe += balance.amount;
+      }
+      if (split.status === "pending") pending += 1;
+      if (split.status === "active") active += 1;
+      if (split.status === "disputed") disputed += 1;
+      if (split.status === "settled") settled += 1;
+    }
+    const roundedOwed = Math.round(owed * 100) / 100;
+    const roundedOwe = Math.round(owe * 100) / 100;
+    return {
+      owed: roundedOwed,
+      owe: roundedOwe,
+      net: Math.round((roundedOwed - roundedOwe) * 100) / 100,
+      pending,
+      active,
+      disputed,
+      settled,
+    };
+  }, [filteredSplits, profile]);
+
+  if (profileLoading || splitsLoading) {
+    return (
+      <SafeAreaView style={styles.centered} edges={["top"]}>
+        <ActivityIndicator size="large" color={colors.accentStrong} accessibilityLabel="Loading wallet" />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <Text style={styles.title}>Wallet</Text>
+        <Text style={styles.subtitle}>dashboard + local finance</Text>
+
+        <View style={styles.balanceCard}>
+          <View style={styles.balanceInner}>
+            <Text style={styles.balanceLabel}>net balance</Text>
+            <Text style={[styles.balanceBig, stats.net < 0 && styles.balanceBigNegative]}>
+              {stats.net >= 0 ? `+ $${stats.net.toFixed(2)}` : `- $${Math.abs(stats.net).toFixed(2)}`}
+            </Text>
+            <View style={styles.balanceSplitRow}>
+              <View style={styles.balanceSplitItem}>
+                <Text style={styles.balanceSplitLabel}>you are owed</Text>
+                <Text style={styles.balanceSplitValue}>+ ${stats.owed.toFixed(0)}</Text>
+              </View>
+              <View style={styles.balanceSplitItem}>
+                <Text style={styles.balanceSplitLabel}>you owe</Text>
+                <Text style={styles.balanceSplitValue}>- ${stats.owe.toFixed(0)}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.connectCard}>
+          <Text style={styles.connectTitle}>Not connected yet</Text>
+          <Text style={styles.muted}>Wallet status: Not connected</Text>
+          <Text style={styles.muted}>Wallet balance: Coming in Phase 2</Text>
+          <Text style={styles.muted}>Devnet SOL balance: Coming in Phase 2</Text>
+          <Pressable style={styles.connectBtn} accessibilityRole="button">
+            <Text style={styles.connectBtnText}>Connect Wallet</Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.sectionTitle}>The numbers</Text>
+        <View style={styles.grid}>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricNumberSmall}>{stats.active}</Text>
+            <Text style={styles.metricLabel}>active</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricNumberSmall}>{stats.pending}</Text>
+            <Text style={styles.metricLabel}>pending</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricNumberSmall}>{stats.disputed}</Text>
+            <Text style={styles.metricLabel}>disputed</Text>
+          </View>
+          <View style={[styles.metricCard, styles.metricWideFull]}>
+            <Text style={styles.metricNumberSmall}>{stats.settled}</Text>
+            <Text style={styles.metricLabel}>settled - all time</Text>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionSub}>Solana (placeholder)</Text>
+          <Text style={styles.muted}>on-chain payments + history are coming in Phase 2</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionSub}>Filter by group</Text>
+          <View style={styles.chips}>
+            {groupOptions.map((opt) => (
+              <Pressable key={opt.id} style={[styles.chip, groupFilter === opt.id && styles.chipSelected]} onPress={() => setGroupFilter(opt.id)}>
+                <Text style={[styles.chipText, groupFilter === opt.id && styles.chipTextSelected]}>{opt.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text style={styles.sectionSub}>Filter by person</Text>
+          <View style={styles.chips}>
+            {personOptions.map((opt) => (
+              <Pressable key={opt.id} style={[styles.chip, personFilter === opt.id && styles.chipSelected]} onPress={() => setPersonFilter(opt.id)}>
+                <Text style={[styles.chipText, personFilter === opt.id && styles.chipTextSelected]}>{opt.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  centered: { flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" },
+  scroll: {
+    paddingHorizontal: layout.screenPaddingH,
+    paddingTop: layout.screenPaddingV,
+    gap: layout.block,
+    paddingBottom: layout.scrollBottom,
+  },
+  title: { ...typography.screenTitle },
+  subtitle: { ...typography.caption, color: colors.textMuted, marginTop: -layout.titleGap, fontStyle: "italic" },
+  balanceCard: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.xl,
+    padding: layout.cardPadding,
+    ...shadows.card,
+  },
+  balanceInner: {
+    gap: layout.stack,
+  },
+  balanceLabel: {
+    ...typography.caption,
+    color: colors.background,
+    fontStyle: "italic",
+  },
+  balanceBig: {
+    color: colors.background,
+    fontSize: 44,
+    fontWeight: "700",
+    letterSpacing: -0.8,
+  },
+  balanceBigNegative: {
+    color: colors.background,
+  },
+  balanceSplitRow: {
+    flexDirection: "row",
+    gap: layout.section,
+  },
+  balanceSplitItem: {
+    gap: layout.titleGap,
+  },
+  balanceSplitLabel: {
+    ...typography.caption,
+    color: "rgba(7,19,17,0.7)",
+    fontStyle: "italic",
+  },
+  balanceSplitValue: {
+    color: colors.background,
+    fontWeight: "700",
+    fontSize: 22,
+    letterSpacing: -0.4,
+  },
+  connectCard: {
+    marginTop: 0,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: "dashed",
+    borderRadius: radius.xl,
+    padding: layout.cardPadding,
+    gap: layout.inline,
+    ...shadows.cardSubtle,
+  },
+  connectTitle: { ...typography.heading, fontSize: 34, fontWeight: "500" },
+  connectBtn: {
+    marginTop: layout.stack,
+    minHeight: touch.minHeight,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  connectBtnText: {
+    ...typography.caption,
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: "dashed",
+    borderRadius: radius.lg,
+    padding: layout.cardPadding,
+    gap: layout.stack,
+    ...shadows.cardSubtle,
+  },
+  sectionTitle: { ...typography.heading, fontSize: 36, fontWeight: "500", marginTop: layout.stack },
+  sectionSub: { ...typography.overline, fontSize: 10 },
+  muted: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: layout.listGap },
+  metricCard: {
+    width: "31%",
+    minHeight: touch.minHeight + 24,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: "dashed",
+    borderRadius: radius.lg,
+    padding: layout.cardPaddingDense,
+    justifyContent: "center",
+  },
+  metricWideFull: { width: "100%", minHeight: touch.minHeight },
+  metricNumberSmall: { ...typography.heading, color: colors.text, fontSize: 34, fontWeight: "500" },
+  metricLabel: { ...typography.caption, color: colors.textMuted, marginTop: 2, fontStyle: "italic" },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: layout.inline },
+  chip: {
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderStyle: "dashed",
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceElevated,
+    minHeight: touch.minHeight - 8,
+    paddingHorizontal: layout.cardPaddingDense,
+    justifyContent: "center",
+  },
+  chipSelected: { borderColor: colors.accentStrong, backgroundColor: colors.primaryMuted },
+  chipText: { ...typography.caption, color: colors.text, fontSize: 12, fontWeight: "600" },
+  chipTextSelected: { color: colors.accentStrong },
+});

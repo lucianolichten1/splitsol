@@ -3,12 +3,14 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { HowSplitSolWorksCard } from "../components/HowSplitSolWorksCard";
 import { SplitCard } from "../components/SplitCard";
 import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { useProfile } from "../hooks/useProfile";
 import { useSplits } from "../hooks/useSplits";
-import { aggregateCurrentUserBalanceAcrossSplits } from "../lib/balanceSummary";
+import { aggregateCurrentUserBalanceAcrossSplits, netForUserInSplitBalances } from "../lib/balanceSummary";
+import { resolveCurrentUserParticipantId } from "../lib/currentUserParticipant";
 import { navigateRoot } from "../lib/navigateRoot";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -30,11 +32,10 @@ export function HomeScreen() {
     () => [
       styles.list,
       {
-        // Scene already sits above the tab bar; pad so the last card clears the FAB.
-        paddingBottom: FAB_SIZE + spacing.xl + spacing.lg,
+        paddingBottom: FAB_SIZE + spacing.xl + spacing.lg + Math.max(insets.bottom, 8),
       },
     ],
-    []
+    [insets.bottom]
   );
 
   useFocusEffect(
@@ -47,7 +48,8 @@ export function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.summary}>
-        <Text style={styles.summaryTitle}>Your balance (active splits)</Text>
+        <Text style={styles.summaryTitle}>Your balance · active splits only</Text>
+        <Text style={styles.summaryHint}>Net of what you owe vs. what you’re owed across open splits.</Text>
         {profileLoading && !profile ? (
           <ActivityIndicator
             style={styles.summaryLoading}
@@ -74,17 +76,23 @@ export function HomeScreen() {
             <View style={styles.emptyWrap}>
               <Text style={styles.emptyTitle}>No active splits</Text>
               <Text style={styles.emptySub}>
-                Create a group, add expenses, and track who owes what. Tap + below to start.
+                Next: open the Groups tab and create a group (or use + here after you have one). Then add a split and expenses.
               </Text>
+              <HowSplitSolWorksCard />
             </View>
           )
         }
-        renderItem={({ item }) => (
-          <SplitCard
-            split={item}
-            onPress={() => navigateRoot(navigation, "SplitSummary", { splitId: item.id })}
-          />
-        )}
+        renderItem={({ item }) => {
+          const me = profile ? resolveCurrentUserParticipantId(item.participants, profile) : null;
+          const viewerNet = profile ? netForUserInSplitBalances(me, item.balances) : undefined;
+          return (
+            <SplitCard
+              split={item}
+              viewerNet={viewerNet}
+              onPress={() => navigateRoot(navigation, "SplitSummary", { splitId: item.id })}
+            />
+          );
+        }}
       />
 
       <Pressable
@@ -93,7 +101,7 @@ export function HomeScreen() {
         android_ripple={{ color: "#ffffff33" }}
         style={({ pressed }) => [
           styles.fab,
-          { bottom: spacing.lg + Math.max(insets.bottom, 6) },
+          { bottom: spacing.lg + Math.max(insets.bottom, 12) },
           pressed && styles.fabPressed,
         ]}
         onPress={() => navigateRoot(navigation, "CreateSplit", {}, false)}
@@ -125,6 +133,13 @@ const styles = StyleSheet.create({
     ...typography.overline,
     fontSize: 10,
   },
+  summaryHint: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.textMuted,
+    lineHeight: 16,
+    marginTop: 2,
+  },
   summaryAmount: {
     ...typography.screenTitle,
     fontSize: 22,
@@ -145,15 +160,17 @@ const styles = StyleSheet.create({
     height: spacing.xs,
   },
   emptyWrap: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xl,
-    alignItems: "center",
-    gap: spacing.sm,
+    paddingHorizontal: 0,
+    paddingVertical: spacing.md,
+    alignItems: "stretch",
+    gap: spacing.md,
+    width: "100%",
   },
   emptyTitle: {
     ...typography.subhead,
     fontSize: 18,
     textAlign: "center",
+    alignSelf: "center",
   },
   emptySub: {
     ...typography.body,
@@ -161,6 +178,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     lineHeight: 22,
     maxWidth: 320,
+    alignSelf: "center",
   },
   loadingWrap: {
     paddingVertical: spacing.xxl,

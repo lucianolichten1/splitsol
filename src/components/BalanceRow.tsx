@@ -16,7 +16,10 @@ export function BalanceRow({ entry, participants, currentUserParticipantId, onMa
   return (
     <View style={[styles.container, entry.settled && styles.containerSettled]}>
       <View style={styles.copy}>
-        <Text style={styles.primaryLine} numberOfLines={3}>
+        <Text
+          style={[styles.primaryLine, entry.settled && styles.primaryLineSettled]}
+          numberOfLines={3}
+        >
           {line}
         </Text>
       </View>
@@ -27,8 +30,8 @@ export function BalanceRow({ entry, participants, currentUserParticipantId, onMa
       ) : (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Mark this balance as settled"
-          android_ripple={{ color: "#00000033" }}
+          accessibilityLabel="Mark this balance as settled locally"
+          android_ripple={{ color: "#14F19533" }}
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
           onPress={onMarkSettled}
         >
@@ -55,8 +58,8 @@ const styles = StyleSheet.create({
     ...shadows.cardSubtle,
   },
   containerSettled: {
-    borderColor: colors.borderStrong,
-    opacity: 0.92,
+    borderColor: colors.border,
+    opacity: 1,
     backgroundColor: colors.surface,
   },
   copy: {
@@ -70,6 +73,11 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: "600",
     lineHeight: 22,
+  },
+  primaryLineSettled: {
+    color: colors.textMuted,
+    textDecorationLine: "line-through",
+    fontWeight: "500",
   },
   settledPill: {
     paddingHorizontal: spacing.md,
@@ -88,7 +96,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   button: {
-    backgroundColor: colors.accent,
+    backgroundColor: "transparent",
+    borderWidth: 2,
+    borderColor: colors.accent,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
@@ -98,10 +108,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonPressed: {
-    opacity: 0.92,
+    opacity: 0.88,
+    backgroundColor: colors.accentMuted,
   },
   buttonText: {
-    color: colors.background,
+    color: colors.accent,
     fontWeight: "800",
     fontSize: 14,
     letterSpacing: 0.2,

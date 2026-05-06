@@ -1,13 +1,11 @@
 import { useCallback, useMemo } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BadgePopup } from "../components/BadgePopup";
 import { BalanceRow } from "../components/BalanceRow";
-import { colors, radius, shadows, spacing, typography } from "../constants/theme";
+import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
 import { useProfile } from "../hooks/useProfile";
-import { useRewards } from "../hooks/useRewards";
 import { useSplits } from "../hooks/useSplits";
 import { getCurrentUserBalanceSummary } from "../lib/balanceSummary";
 import { resolveCurrentUserParticipantId } from "../lib/currentUserParticipant";
@@ -17,8 +15,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "SplitSummary">;
 
 export function SplitSummaryScreen({ route }: Props) {
   const { splitId } = route.params;
-  const { splits, refresh, markBalanceSettled, loading } = useSplits();
-  const { checkAndAwardRewards, newBadge, dismissBadge } = useRewards();
+  const { splits, refresh, markBalanceSettled, setParticipantConfirmation, loading } = useSplits();
   const { profile, refreshProfile } = useProfile();
 
   useFocusEffect(
@@ -52,6 +49,13 @@ export function SplitSummaryScreen({ route }: Props) {
     [split, viewerParticipantId, balancesSafe, participantsSafe]
   );
 
+  const netSummaryTone = useMemo(() => {
+    const label = userBalanceSummary?.label ?? "";
+    if (label.startsWith("You owe")) return "owe" as const;
+    if (label.startsWith("You are owed")) return "owed" as const;
+    return "neutral" as const;
+  }, [userBalanceSummary?.label]);
+
   if (loading && !split) {
     return (
       <SafeAreaView style={styles.centered} edges={["top", "bottom"]}>
@@ -72,14 +76,16 @@ export function SplitSummaryScreen({ route }: Props) {
     const changed = await markBalanceSettled(split.id, balanceId);
     if (!changed) return;
 
-    const nextSplits = await refresh();
-    await checkAndAwardRewards("balance_settled", { splits: nextSplits });
-
-    const refreshedSplit = nextSplits.find((item) => item.id === split.id);
-    if (refreshedSplit?.status === "settled") {
-      await checkAndAwardRewards("split_fully_settled", { splits: nextSplits });
-    }
+    await refresh();
   };
+  const confirmations = split?.participantConfirmations ?? {};
+
+  const onSetConfirmation = async (participantId: string, status: "accepted" | "disputed") => {
+    if (!viewerParticipantId || participantId !== viewerParticipantId) return;
+    await setParticipantConfirmation(split.id, participantId, status);
+    await refresh();
+  };
+
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
@@ -91,7 +97,11 @@ export function SplitSummaryScreen({ route }: Props) {
           <Text style={styles.groupLine} numberOfLines={1}>
             Group · {split.groupName}
           </Text>
-        ) : null}
+        ) : (
+          <Text style={styles.groupLine} numberOfLines={1}>
+            Direct transaction
+          </Text>
+        )}
         <View style={styles.totalBlock}>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalBig}>
@@ -99,12 +109,74 @@ export function SplitSummaryScreen({ route }: Props) {
           </Text>
         </View>
         {userBalanceSummary?.label ? (
-          <Text style={styles.youSummary} numberOfLines={3}>
+          <Text
+            style={[
+              styles.youSummary,
+              netSummaryTone === "owe" && styles.youSummaryOwe,
+              netSummaryTone === "owed" && styles.youSummaryOwed,
+            ]}
+            numberOfLines={3}
+          >
             {userBalanceSummary.label}
           </Text>
         ) : null}
+        <Text style={styles.netHelper}>These are net balances after all expenses.</Text>
       </View>
-      <Text style={styles.listSectionTitle}>Balances</Text>
+      <View style={styles.confirmCard}>
+        <Text style={styles.listSectionTitle}>Participant confirmations</Text>
+        <Text style={styles.listSectionHint}>Local simulation for future multi-user accept/dispute flow.</Text>
+        <View style={styles.confirmList}>
+          {participantsSafe.map((p) => {
+            const isCurrentUser = p.id === viewerParticipantId;
+            const rawStatus = confirmations[p.id];
+            const status =
+              rawStatus === "accepted" || rawStatus === "disputed"
+                ? rawStatus
+                : isCurrentUser
+                  ? "accepted"
+                  : "pending";
+            return (
+              <View key={p.id} style={styles.confirmRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.confirmName}>{isCurrentUser ? "You" : p.nickname}</Text>
+                  <Text style={styles.confirmStatus}>Status: {status}</Text>
+                </View>
+                {isCurrentUser ? (
+                  <View style={styles.confirmActions}>
+                    <Pressable
+                      style={({ pressed }) => [styles.confirmBtn, status === "accepted" && styles.confirmBtnAccepted, pressed && { opacity: 0.9 }]}
+                      onPress={() => onSetConfirmation(p.id, "accepted")}
+                    >
+                      <Text style={[styles.confirmBtnText, status === "accepted" && styles.confirmBtnTextSelected]}>Accept</Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [styles.confirmBtn, status === "disputed" && styles.confirmBtnDisputed, pressed && { opacity: 0.9 }]}
+                      onPress={() => onSetConfirmation(p.id, "disputed")}
+                    >
+                      <Text style={[styles.confirmBtnText, status === "disputed" && styles.confirmBtnTextSelected]}>Dispute</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.readonlyStatusPill,
+                      status === "accepted" && styles.readonlyStatusAccepted,
+                      status === "disputed" && styles.readonlyStatusDisputed,
+                    ]}
+                  >
+                    <Text style={styles.readonlyStatusText}>{status}</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.balancesHeader}>
+        <Text style={styles.listSectionTitle}>Balances</Text>
+        <Text style={styles.listSectionHint}>Unsettled rows can be marked paid locally.</Text>
+      </View>
       <FlatList
         data={balancesSafe}
         keyExtractor={(item) => item.id}
@@ -120,7 +192,6 @@ export function SplitSummaryScreen({ route }: Props) {
           />
         )}
       />
-      <BadgePopup badge={newBadge} onClose={dismissBadge} />
     </SafeAreaView>
   );
 }
@@ -178,15 +249,118 @@ const styles = StyleSheet.create({
   youSummary: {
     ...typography.body,
     marginTop: spacing.sm,
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: 24,
+  },
+  youSummaryOwe: {
+    color: colors.warning,
+  },
+  youSummaryOwed: {
+    color: colors.accent,
+  },
+  netHelper: {
+    ...typography.caption,
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: spacing.xs,
+  },
+  balancesHeader: {
+    gap: 4,
+    marginTop: spacing.xs,
   },
   listSectionTitle: {
     ...typography.overline,
     fontSize: 10,
-    marginTop: spacing.xs,
+  },
+  listSectionHint: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.textDim,
+  },
+
+  confirmCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.sm,
+    ...shadows.cardSubtle,
+  },
+  confirmList: {
+    gap: spacing.xs,
+  },
+  confirmRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    minHeight: touch.minHeight,
+    paddingVertical: spacing.xs,
+  },
+  confirmName: {
+    ...typography.body,
+    fontWeight: "700",
+  },
+  confirmStatus: {
+    ...typography.caption,
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  confirmActions: {
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  confirmBtn: {
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.pill,
+    minHeight: touch.minHeight - 8,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+  },
+  confirmBtnAccepted: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentMuted,
+  },
+  confirmBtnDisputed: {
+    borderColor: colors.warning,
+    backgroundColor: colors.warningMuted,
+  },
+  confirmBtnText: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.text,
+    fontWeight: "700",
+  },
+  confirmBtnTextSelected: {
+    color: colors.text,
+  },
+  readonlyStatusPill: {
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+    borderRadius: radius.pill,
+    minHeight: touch.minHeight - 8,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+  },
+  readonlyStatusAccepted: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accentMuted,
+  },
+  readonlyStatusDisputed: {
+    borderColor: colors.warning,
+    backgroundColor: colors.warningMuted,
+  },
+  readonlyStatusText: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.text,
+    fontWeight: "700",
+    textTransform: "capitalize",
   },
   listContent: {
     gap: spacing.md,

@@ -6,7 +6,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { SplitCard } from "../components/SplitCard";
 import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
 import { useGroups } from "../hooks/useGroups";
+import { useProfile } from "../hooks/useProfile";
 import { useSplits } from "../hooks/useSplits";
+import { netForUserInSplitBalances } from "../lib/balanceSummary";
+import { participantMatchesProfile, resolveCurrentUserParticipantId } from "../lib/currentUserParticipant";
 import { navigateRoot } from "../lib/navigateRoot";
 import { GroupsStackParamList } from "../navigation/groupsStackTypes";
 
@@ -16,12 +19,14 @@ export function GroupDetailScreen({ route, navigation }: Props) {
   const { groupId } = route.params;
   const { getGroupById, deleteGroup, refresh: refreshGroups, loading: groupsLoading } = useGroups();
   const { splits, refresh: refreshSplits } = useSplits();
+  const { profile, refreshProfile } = useProfile();
 
   useFocusEffect(
     useCallback(() => {
       refreshGroups();
       refreshSplits();
-    }, [refreshGroups, refreshSplits])
+      refreshProfile();
+    }, [refreshGroups, refreshSplits, refreshProfile])
   );
 
   const group = getGroupById(groupId);
@@ -70,19 +75,35 @@ export function GroupDetailScreen({ route, navigation }: Props) {
         </Text>
         {group.description ? <Text style={styles.description}>{group.description}</Text> : null}
 
+        <View style={styles.nextCard}>
+          <Text style={styles.nextTitle}>What’s next</Text>
+          <Text style={styles.nextBody}>
+            Start a split to add expenses—balances are computed for everyone in this group. You can edit members anytime.
+          </Text>
+        </View>
+
         <Text style={styles.section}>Members</Text>
         <View style={styles.memberList}>
           {group.members.length === 0 ? (
             <Text style={styles.muted}>No members yet. Tap Edit to add people.</Text>
           ) : (
-            group.members.map((m) => (
+            group.members.map((m) => {
+              const isYou = !!(profile && participantMatchesProfile(m, profile));
+              return (
               <View key={m.id} style={styles.memberRow}>
                 <View style={styles.memberTop}>
                   <Text style={styles.memberName}>{m.nickname}</Text>
-                  <View style={[styles.sourceBadge, m.friendId ? styles.sourceFriend : styles.sourceManual]}>
-                    <Text style={[styles.sourceBadgeText, m.friendId && styles.sourceBadgeTextFriend]}>
-                      {m.friendId ? "Friend" : "Manual"}
-                    </Text>
+                  <View style={styles.badgeRow}>
+                    {isYou ? (
+                      <View style={[styles.sourceBadge, styles.sourceYou]}>
+                        <Text style={styles.sourceBadgeTextYou}>You</Text>
+                      </View>
+                    ) : null}
+                    <View style={[styles.sourceBadge, m.friendId ? styles.sourceFriend : styles.sourceManual]}>
+                      <Text style={[styles.sourceBadgeText, m.friendId && styles.sourceBadgeTextFriend]}>
+                        {m.friendId ? "Friend" : "Manual"}
+                      </Text>
+                    </View>
                   </View>
                 </View>
                 {m.friendId ? (
@@ -92,13 +113,18 @@ export function GroupDetailScreen({ route, navigation }: Props) {
                 ) : (
                   <Text style={styles.memberMeta}>Added by nickname only</Text>
                 )}
+                {isYou ? (
+                  <Text style={styles.youNote}>Always included—you can’t remove yourself.</Text>
+                ) : null}
               </View>
-            ))
+            );
+            })
           )}
         </View>
 
         <Pressable
           accessibilityRole="button"
+          accessibilityHint="Starts a new split using this group’s members"
           android_ripple={{ color: "#00000022" }}
           style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.94 }]}
           onPress={() =>
@@ -108,6 +134,7 @@ export function GroupDetailScreen({ route, navigation }: Props) {
           }
         >
           <Text style={styles.primaryBtnText}>Create split in this group</Text>
+          <Text style={styles.primaryBtnSub}>Use a snapshot of members above</Text>
         </Pressable>
 
         <Pressable
@@ -120,17 +147,23 @@ export function GroupDetailScreen({ route, navigation }: Props) {
         </Pressable>
 
         <Text style={styles.section}>Splits in this group</Text>
+        <Text style={styles.sectionHint}>Tap a split to open balances and settle up.</Text>
         <View style={styles.splitList}>
           {groupSplits.length === 0 ? (
             <Text style={styles.muted}>No splits yet for this group.</Text>
           ) : (
-            groupSplits.map((item) => (
-              <SplitCard
-                key={item.id}
-                split={item}
-                onPress={() => navigateRoot(navigation, "SplitSummary", { splitId: item.id })}
-              />
-            ))
+            groupSplits.map((item) => {
+              const me = profile ? resolveCurrentUserParticipantId(item.participants, profile) : null;
+              const viewerNet = profile ? netForUserInSplitBalances(me, item.balances) : undefined;
+              return (
+                <SplitCard
+                  key={item.id}
+                  split={item}
+                  viewerNet={viewerNet}
+                  onPress={() => navigateRoot(navigation, "SplitSummary", { splitId: item.id })}
+                />
+              );
+            })
           )}
         </View>
 
@@ -203,6 +236,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.sm,
   },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    flexShrink: 0,
+  },
   memberName: {
     ...typography.body,
     fontWeight: "700",
@@ -218,9 +257,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
     borderColor: colors.primary,
   },
+  sourceYou: {
+    backgroundColor: colors.accentMuted,
+    borderColor: colors.accent,
+  },
   sourceManual: {
     backgroundColor: colors.surface,
     borderColor: colors.borderStrong,
+  },
+  sourceBadgeTextYou: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: colors.accent,
+    letterSpacing: 0.5,
   },
   sourceBadgeText: {
     fontSize: 10,
@@ -235,6 +284,39 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textMuted,
     marginTop: 4,
+  },
+  youNote: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.textDim,
+    marginTop: spacing.xs,
+    fontStyle: "italic",
+  },
+  nextCard: {
+    backgroundColor: colors.primaryMuted,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  nextTitle: {
+    ...typography.overline,
+    fontSize: 11,
+    color: colors.primary,
+  },
+  nextBody: {
+    ...typography.caption,
+    color: colors.text,
+    lineHeight: 20,
+    fontSize: 13,
+  },
+  sectionHint: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.xs,
+    fontSize: 12,
   },
   muted: {
     ...typography.caption,
@@ -263,6 +345,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minHeight: touch.minHeight + 8,
     justifyContent: "center",
+    gap: 4,
     ...shadows.card,
   },
   primaryBtnText: {
@@ -270,6 +353,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 16,
     letterSpacing: 0.2,
+  },
+  primaryBtnSub: {
+    color: colors.background,
+    fontSize: 12,
+    fontWeight: "600",
+    opacity: 0.85,
   },
   danger: {
     marginTop: spacing.lg,

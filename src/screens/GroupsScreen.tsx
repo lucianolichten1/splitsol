@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -6,6 +6,8 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { GroupCard } from "../components/GroupCard";
 import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
 import { useGroups } from "../hooks/useGroups";
+import { useSplits } from "../hooks/useSplits";
+import { getGroupSplitStatsMap } from "../lib/groupSplitStats";
 import { navigateRoot } from "../lib/navigateRoot";
 import { GroupsStackParamList } from "../navigation/groupsStackTypes";
 
@@ -17,11 +19,30 @@ export function GroupsScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const { groups, loading, refresh } = useGroups();
+  const { splits, refresh: refreshSplits } = useSplits();
+
+  const splitStatsByGroup = useMemo(
+    () => getGroupSplitStatsMap(groups, splits),
+    [groups, splits]
+  );
 
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh])
+      refreshSplits();
+    }, [refresh, refreshSplits])
+  );
+
+  const ListHeader = useCallback(
+    () => (
+      <View style={styles.listHeader}>
+        <Text style={styles.listHeaderTitle}>Start with a group</Text>
+        <Text style={styles.listHeaderSub}>
+          Groups hold everyone you split with. Create a group first, then add a transaction from the group or the Transactions tab.
+        </Text>
+      </View>
+    ),
+    []
   );
 
   return (
@@ -29,6 +50,7 @@ export function GroupsScreen() {
       <FlatList
         data={groups}
         keyExtractor={(item) => item.id}
+        ListHeaderComponent={ListHeader}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
@@ -40,17 +62,22 @@ export function GroupsScreen() {
             <View style={styles.emptyWrap}>
               <Text style={styles.emptyTitle}>No groups yet</Text>
               <Text style={styles.emptySub}>
-                Groups hold your people and past splits. Tap + to create your first group.
+                Create a group as the first step—add friends or nicknames, then you can start a split. Tap + below.
               </Text>
             </View>
           )
         }
-        renderItem={({ item }) => (
-          <GroupCard
-            group={item}
-            onPress={() => navigation.navigate("GroupDetail", { groupId: item.id })}
-          />
-        )}
+        renderItem={({ item }) => {
+          const stats = splitStatsByGroup.get(item.id);
+          return (
+            <GroupCard
+              group={item}
+              activeSplitsCount={stats?.activeSplitsCount}
+              latestSplitName={stats?.latestSplitName}
+              onPress={() => navigation.navigate("GroupDetail", { groupId: item.id })}
+            />
+          );
+        }}
       />
 
       <Pressable
@@ -59,7 +86,7 @@ export function GroupsScreen() {
         android_ripple={{ color: "#ffffff33" }}
         style={({ pressed }) => [
           styles.fab,
-          { bottom: spacing.lg + Math.max(insets.bottom, 6) },
+          { bottom: spacing.lg + Math.max(insets.bottom, 12) },
           pressed && styles.fabPressed,
         ]}
         onPress={() => navigateRoot(navigation, "CreateEditGroup", { cameFrom: "groups" })}
@@ -80,7 +107,24 @@ const styles = StyleSheet.create({
   list: {
     flexGrow: 1,
     gap: spacing.md,
-    paddingBottom: FAB_SIZE + spacing.xl + spacing.lg,
+    paddingBottom: FAB_SIZE + spacing.xl + spacing.lg + 8,
+  },
+  listHeader: {
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+    paddingRight: spacing.xs,
+  },
+  listHeaderTitle: {
+    ...typography.subhead,
+    fontSize: 17,
+    fontWeight: "700",
+    color: colors.accent,
+  },
+  listHeaderSub: {
+    ...typography.caption,
+    color: colors.textMuted,
+    lineHeight: 20,
+    fontSize: 13,
   },
   separator: {
     height: spacing.xs,

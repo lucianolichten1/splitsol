@@ -29,7 +29,7 @@ No backend. No accounts. No friction.
 Launch → Home (splits list)
   → Create Split → Add participants (by nickname) → Add expenses
   → Auto-calculate who owes what → Review summary
-  → Mark payment as settled (local) → Reward earned → History updated
+  → Mark payment as settled (local) → History updated
 ```
 
 **Phase 2 (Solana layer added on top):**
@@ -37,10 +37,10 @@ Launch → Home (splits list)
 Launch → Connect Wallet (optional, enhances experience)
   → Home shows devnet SOL balance + wallet address
   → Split Summary → Pay via MWA signing → TX confirmed on devnet
-  → Confirmation shows tx hash → Badge popup
+  → Confirmation shows tx hash and success state
 ```
 
-Wallet connection is additive. The splitting and rewards flow works without it.
+Wallet connection is additive. The core splitting flow works without it.
 
 ---
 
@@ -53,7 +53,6 @@ Wallet connection is additive. The splitting and rewards flow works without it.
 - **Balance Calculator** — greedy algorithm computing minimum settlements
 - **Split Summary** — who owes who, amounts, "Mark as Settled" per balance entry
 - **History tab** — past splits stored in AsyncStorage, filterable by status
-- **Rewards tab** — points and badges earned from app actions (fully local)
 - **Empty states** — friendly UI when no splits or history exist yet
 
 ### Phase 2 — Solana Layer (Add After Phase 1 is Complete)
@@ -67,7 +66,7 @@ Wallet connection is additive. The splitting and rewards flow works without it.
 ### Nice-to-Have (If Time Allows, Either Phase)
 - Percentage-based custom splits
 - QR code or deeplink for payment requests
-- Haptic feedback on badge award
+- Haptic feedback on key actions (e.g. successful payment)
 - Animated transaction confirmation
 - Short tx hash copy button
 
@@ -83,11 +82,10 @@ Wallet connection is additive. The splitting and rewards flow works without it.
 | 4 | **Add Expenses** | 1 | Line item form — description, amount, who paid |
 | 5 | **Split Summary** | 1→2 | Balances calculated; Phase 1 shows "Mark Settled", Phase 2 shows "Pay via SOL" |
 | 6 | **Pay Screen** | 2 | Confirm SOL amount + recipient address, MWA sign & send |
-| 7 | **Confirmation** | 2 | Tx hash, success state, reward badge popup |
+| 7 | **Confirmation** | 2 | Tx hash, success state |
 | 8 | **History** | 1 | Past splits — date, group, status, total amount |
-| 9 | **Rewards** | 1 | Points total, earned badges, progress bar to next badge |
 
-Screens 1–5, 8, 9 are fully functional in Phase 1. Screens 6–7 are Phase 2 only. Screens 2 and 5 get enhanced in Phase 2 without being rebuilt.
+Screens 1–5 and 8 are fully functional in Phase 1. Screens 6–7 are Phase 2 only. Screens 2 and 5 get enhanced in Phase 2 without being rebuilt.
 
 ---
 
@@ -146,23 +144,8 @@ interface Transaction {
   timestamp: string;
 }
 
-// Rewards — fully functional in Phase 1
-interface RewardsProfile {
-  totalPoints: number;
-  badges: Badge[];
-}
-
-interface Badge {
-  id: string;
-  name: string;
-  icon: string;           // emoji
-  earnedAt: string;
-  description: string;
-}
-
 // AsyncStorage keys
 // 'splitsol:splits'    → Split[]
-// 'splitsol:rewards'   → RewardsProfile
 // 'splitsol:wallet'    → { publicKey: string } | null  (Phase 2)
 ```
 
@@ -170,37 +153,7 @@ interface Badge {
 
 ---
 
-## 7. Rewards Logic
-
-Fully implemented in Phase 1. Phase 2 adds two additional triggers but doesn't change the structure.
-
-**Points:**
-
-| Action | Points | Phase |
-|--------|--------|-------|
-| Create first split | +25 pts | 1 |
-| Settle a balance entry (any method) | +20 pts | 1 |
-| Fully settle a split | +100 pts | 1 |
-| Create 3 splits total | +50 pts bonus | 1 |
-| First wallet connect | +50 pts | 2 |
-| First on-chain SOL payment | +30 pts | 2 |
-| Send 5 on-chain payments | +75 pts bonus | 2 |
-
-**Badges (earned once):**
-
-| Badge | Icon | Trigger | Phase |
-|-------|------|---------|-------|
-| First Split | 🔱 | Created first split | 1 |
-| All Square | ✅ | First fully settled split | 1 |
-| Group Treasurer | 🏦 | 3 splits created | 1 |
-| On-Chain | ⛓️ | First SOL payment sent | 2 |
-| Solana Native | 🌊 | 5 on-chain payments sent | 2 |
-
-Rewards are stored in AsyncStorage and computed deterministically — no server, no sync. All badge checks run after every state-changing action (create split, settle entry, complete split).
-
----
-
-## 8. Demo Flow (Hackathon Pitch — 3 Minutes)
+## 7. Demo Flow (Hackathon Pitch — 3 Minutes)
 
 The demo runs end-to-end using Phase 2 (Solana connected), but every step before step 6 works without it as a fallback.
 
@@ -210,20 +163,20 @@ The demo runs end-to-end using Phase 2 (Solana connected), but every step before
 4. **Add Expenses** → "Dinner" 0.42 SOL (paid by you) → "Taxi" 0.11 SOL (paid by Alice)
 5. **Tap "Calculate"** → Split Summary: Bob owes you 0.14 SOL, you owe Alice 0.06 SOL
 6. **Tap "Pay Alice 0.06 SOL"** → Pay screen → MWA signing sheet → Approve → TX confirmed
-7. **Confirmation** → tx hash shown → badge popup: "On-Chain ⛓️ +30 pts"
-8. **Show History tab** → show settled split → **Show Rewards tab** → badges earned
+7. **Confirmation** → tx hash shown, success state
 
-**Fallback if MWA fails on stage:** Skip steps 2 and 6–7. Use "Mark Settled" instead of "Pay via SOL". The split logic, history, and rewards all work identically. Tell judges: "The Solana layer is built and working — here's the transaction from our test run" (show screenshot of tx hash).
+8. **Show History tab** → show settled split and balances
+
+**Fallback if MWA fails on stage:** Skip steps 2 and 6–7. Use "Mark Settled" instead of "Pay via SOL". The split logic and history work the same. Tell judges: "The Solana layer is built and working — here's the transaction from our test run" (show screenshot of tx hash).
 
 **Key talking points:**
 - The app works without a wallet — Solana is the settlement layer, not the gatekeeper
 - No backend, no account, no email — wallet IS identity when connected
 - Settlement is a real on-chain SOL transfer (show devnet explorer link)
-- Rewards gamify the behavior loop entirely client-side
 
 ---
 
-## 9. What NOT to Build Yet
+## 8. What NOT to Build Yet
 
 - ❌ Real mainnet payments
 - ❌ Backend / database / user accounts
@@ -239,7 +192,7 @@ The demo runs end-to-end using Phase 2 (Solana connected), but every step before
 
 ---
 
-## 10. Cursor Implementation Instructions
+## 9. Cursor Implementation Instructions
 
 ### Project Setup
 
@@ -255,7 +208,6 @@ npx expo install \
   @react-navigation/bottom-tabs \
   react-native-safe-area-context \
   react-native-screens \
-  expo-haptics \
   expo-crypto
   
 # Phase 2 deps (install now, import only in Phase 2)
@@ -281,24 +233,20 @@ src/
     PayScreen.tsx           ← Phase 2
     ConfirmationScreen.tsx  ← Phase 2
     HistoryScreen.tsx
-    RewardsScreen.tsx
   components/
     SplitCard.tsx
     ExpenseItem.tsx
     BalanceRow.tsx
-    BadgePopup.tsx
     WalletChip.tsx          ← Phase 2
     TxStatusBadge.tsx       ← Phase 2
   hooks/
     useSplits.ts            ← CRUD on AsyncStorage
-    useRewards.ts           ← points + badge logic
     useWallet.ts            ← Phase 2: MWA connect/sign/send
   lib/
     calculator.ts           ← balance computation
     storage.ts              ← typed AsyncStorage wrappers
     solana.ts               ← Phase 2: RPC client, sendSol()
   constants/
-    rewards.ts              ← badge definitions, point values
     theme.ts                ← colors, typography
   navigation/
     RootNavigator.tsx
@@ -312,7 +260,7 @@ src/
 Build in this exact sequence. Each step is independently testable.
 
 **Step 1 — Theme + Navigation shell**
-Set up `theme.ts` with the full color palette. Build `RootNavigator` (stack) and `TabNavigator` (3 tabs: Splits, History, Rewards) with placeholder screens. Confirm navigation works before writing any logic.
+Set up `theme.ts` with the full color palette. Build `RootNavigator` (stack) and `TabNavigator` (main tabs for people, transactions, wallet, and profile) with placeholder screens. Confirm navigation works before writing any logic.
 
 **Step 2 — Storage layer**
 Write `storage.ts` with typed `get`, `set`, and `update` wrappers around AsyncStorage. Write `useSplits.ts` hook exposing `getSplits`, `addSplit`, `updateSplit`. Test with hardcoded mock data before connecting to UI.
@@ -360,21 +308,17 @@ export function computeSettlements(
 }
 ```
 
-**Step 4 — Rewards hook**
-Write `useRewards.ts` with `checkAndAwardRewards(action, splits)` that reads current `RewardsProfile` from storage, evaluates triggers, awards new points/badges if conditions are met, and writes back. Import `rewards.ts` for badge definitions. This hook is called after every state-changing action.
-
-**Step 5 — Screens (in flow order)**
+**Step 4 — Screens (in flow order)**
 Build one screen at a time, in the order a user would encounter them:
 - `SplashScreen` → static, just navigate to Home after 1.5s
 - `HomeScreen` → reads splits from `useSplits`, renders `SplitCard` list, FAB navigates to CreateSplit
 - `CreateSplitScreen` → controlled form, validates before proceeding to AddExpenses
 - `AddExpensesScreen` → line item list + form, "Calculate" runs `computeSettlements` and navigates to SplitSummary
-- `SplitSummaryScreen` → renders `BalanceRow` for each entry; "Mark Settled" flips `settled: true`, triggers rewards check
+- `SplitSummaryScreen` → renders `BalanceRow` for each entry; "Mark Settled" flips `settled: true`
 - `HistoryScreen` → reads all splits, filters by status
-- `RewardsScreen` → reads `RewardsProfile`, renders badge grid
 
-**Step 6 — Polish**
-Empty states on Home and History. `BadgePopup` modal triggered by new badge award in `useRewards`. Haptics on badge award via `expo-haptics`. Confirm the full end-to-end flow works before starting Phase 2.
+**Step 5 — Polish**
+Empty states on Home and History. Confirm the full end-to-end flow works before starting Phase 2.
 
 ---
 
@@ -382,7 +326,7 @@ Empty states on Home and History. `BadgePopup` modal triggered by new badge awar
 
 Only start Phase 2 when Phase 1 is fully working and demo-ready.
 
-**Step 7 — Wallet hook**
+**Step 6 — Wallet hook**
 Write `useWallet.ts` using `@solana-mobile/mobile-wallet-adapter-protocol`. Expose `connect()`, `disconnect()`, `publicKey`, `connected`. Store `publicKey` in AsyncStorage on connect so it survives app restarts.
 
 ```typescript
@@ -400,7 +344,7 @@ async function connect() {
 }
 ```
 
-**Step 8 — Solana RPC**
+**Step 7 — Solana RPC**
 Write `solana.ts` with `getBalance(publicKey)` and `buildTransferTx(from, to, lamports)`. The tx is built here but signed in `useWallet` via `transact()`. Keep RPC calls isolated in this file.
 
 ```typescript
@@ -426,13 +370,13 @@ export async function buildTransferTx(
 }
 ```
 
-**Step 9 — Update HomeScreen + SplitSummary**
+**Step 8 — Update HomeScreen + SplitSummary**
 Add `WalletChip` to `HomeScreen` header. When connected, show devnet balance. On `SplitSummaryScreen`, if wallet is connected and the balance entry recipient has a `walletAddress`, show "Pay via SOL" instead of "Mark Settled".
 
-**Step 10 — PayScreen + ConfirmationScreen**
-Build `PayScreen` showing amount + recipient address with a "Sign & Send" button. On tap, call `buildTransferTx`, then `transact()` to sign and send via MWA. On success, navigate to `ConfirmationScreen` with tx hash. Update `BalanceEntry.settled = true` and `txHash`. Trigger rewards check for on-chain payment badges.
+**Step 9 — PayScreen + ConfirmationScreen**
+Build `PayScreen` showing amount + recipient address with a "Sign & Send" button. On tap, call `buildTransferTx`, then `transact()` to sign and send via MWA. On success, navigate to `ConfirmationScreen` with tx hash. Update `BalanceEntry.settled = true` and `txHash`.
 
-**Step 11 — Devnet airdrop button**
+**Step 10 — Devnet airdrop button**
 Add a small "Request SOL" button on `HomeScreen` (visible only in devnet + connected state). Calls `connection.requestAirdrop(publicKey, 1e9)` and refreshes balance.
 
 ---
@@ -470,9 +414,10 @@ export const typography = {
 RootStack:
   SplashScreen
   MainTabs (Bottom Tab Navigator):
-    Tab 1 — Splits → HomeScreen
-    Tab 2 — History → HistoryScreen
-    Tab 3 — Rewards → RewardsScreen
+    Tab 1 — People / groups (example: GroupsStack)
+    Tab 2 — Transactions / activity (example: TransactionsScreen)
+    Tab 3 — Wallet (example: WalletScreen)
+    Tab 4 — Profile / Me (example: ProfileStack)
 
   Modal Stack (presented over tabs):
     CreateSplitScreen
@@ -483,10 +428,8 @@ RootStack:
 ```
 
 ### Phase 1 Polish Checklist (Before Starting Phase 2)
-- [ ] End-to-end flow works: create → add expenses → calculate → settle → history → rewards
+- [ ] End-to-end flow works: create → add expenses → calculate → settle → history
 - [ ] Empty states on Home and History
-- [ ] Badge popup appears on first split creation
-- [ ] Haptic feedback on badge award
 - [ ] All splits persist across app restarts (AsyncStorage confirmed)
 - [ ] Calculator handles edge cases: one payer, all equal, 2-person split
 

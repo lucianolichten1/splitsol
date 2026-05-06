@@ -2,38 +2,52 @@ import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { SplitCard } from "../components/SplitCard";
 import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
+import { useProfile } from "../hooks/useProfile";
 import { useSplits } from "../hooks/useSplits";
+import { netForUserInSplitBalances } from "../lib/balanceSummary";
+import { resolveCurrentUserParticipantId } from "../lib/currentUserParticipant";
 import { navigateRoot } from "../lib/navigateRoot";
 import { RootStackParamList } from "../navigation/RootNavigator";
 
 type RootNav = NativeStackNavigationProp<RootStackParamList>;
 
+const FILTER_OPTIONS: { value: "all" | "active" | "settled"; label: string }[] = [
+  { value: "all", label: "All splits" },
+  { value: "active", label: "Active" },
+  { value: "settled", label: "Settled" },
+];
+
 export function HistoryScreen() {
   const navigation = useNavigation<RootNav>();
+  const insets = useSafeAreaInsets();
   const { splits, refresh, loading } = useSplits();
+  const { profile, refreshProfile } = useProfile();
   const [filter, setFilter] = useState<"all" | "active" | "settled">("all");
 
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh])
+      refreshProfile();
+    }, [refresh, refreshProfile])
   );
 
   const filtered = splits.filter((split) => (filter === "all" ? true : split.status === filter));
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <Text style={styles.screenHint}>Filter your splits, then tap a card to open balances and details.</Text>
       <View style={styles.filters}>
-        {(["all", "active", "settled"] as const).map((value) => {
+        {FILTER_OPTIONS.map(({ value, label }) => {
           const selected = value === filter;
           return (
             <Pressable
               key={value}
               accessibilityRole="button"
               accessibilityState={{ selected }}
+              accessibilityLabel={`Filter: ${label}`}
               android_ripple={{ color: "#ffffff18" }}
               style={({ pressed }) => [
                 styles.filterButton,
@@ -42,7 +56,7 @@ export function HistoryScreen() {
               ]}
               onPress={() => setFilter(value)}
             >
-              <Text style={[styles.filterText, selected && styles.filterTextSelected]}>{value}</Text>
+              <Text style={[styles.filterText, selected && styles.filterTextSelected]}>{label}</Text>
             </Pressable>
           );
         })}
@@ -50,7 +64,7 @@ export function HistoryScreen() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: spacing.xxl + spacing.md + Math.max(insets.bottom, 8) }]}
         ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
         ListEmptyComponent={
           loading ? (
@@ -63,12 +77,17 @@ export function HistoryScreen() {
             <Text style={styles.empty}>No splits match this filter.</Text>
           )
         }
-        renderItem={({ item }) => (
-          <SplitCard
-            split={item}
-            onPress={() => navigateRoot(navigation, "SplitSummary", { splitId: item.id })}
-          />
-        )}
+        renderItem={({ item }) => {
+          const me = profile ? resolveCurrentUserParticipantId(item.participants, profile) : null;
+          const viewerNet = profile ? netForUserInSplitBalances(me, item.balances) : undefined;
+          return (
+            <SplitCard
+              split={item}
+              viewerNet={viewerNet}
+              onPress={() => navigateRoot(navigation, "SplitSummary", { splitId: item.id })}
+            />
+          );
+        }}
       />
     </SafeAreaView>
   );
@@ -111,7 +130,6 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontSize: 13,
     fontWeight: "600",
-    textTransform: "capitalize",
   },
   filterTextSelected: {
     color: colors.accent,
@@ -125,7 +143,12 @@ const styles = StyleSheet.create({
   },
   listContent: {
     gap: spacing.md,
-    paddingBottom: spacing.xxl + spacing.md,
+  },
+  screenHint: {
+    ...typography.caption,
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
   },
   loadingWrap: {
     paddingVertical: spacing.xxl,
