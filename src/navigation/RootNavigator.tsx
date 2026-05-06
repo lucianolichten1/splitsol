@@ -16,7 +16,7 @@ export type RootStackParamList = {
   AddExpenses: {
     name: string;
     participants: Participant[];
-    groupId: string;
+    groupId?: string;
     groupName?: string;
   };
   SplitSummary: {
@@ -46,7 +46,7 @@ export function RootNavigator() {
         <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
         <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
         <Stack.Group screenOptions={{ presentation: "modal" }}>
-          <Stack.Screen name="CreateSplit" component={CreateSplitScreen} options={{ title: "Create Split" }} />
+          <Stack.Screen name="CreateSplit" component={CreateSplitScreen} options={{ title: "Create Transaction" }} />
           <Stack.Screen name="AddExpenses" component={AddExpensesScreen} options={{ title: "Add Expenses" }} />
           <Stack.Screen name="SplitSummary" component={SplitSummaryScreen} options={{ title: "Split Summary" }} />
           <Stack.Screen

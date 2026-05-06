@@ -122,7 +122,7 @@ export function aggregateCurrentUserBalanceAcrossSplits(
 
   let total = 0;
   for (const split of splits) {
-    if (split.status !== "active") continue;
+    if (split.status === "settled") continue;
     const uid = resolveCurrentUserParticipantId(split.participants, profile);
     total += netForUserInSplitBalances(uid, split.balances);
   }

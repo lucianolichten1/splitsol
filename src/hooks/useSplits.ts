@@ -1,6 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { storage } from "../lib/storage";
-import { Split, SplitStatus } from "../types";
+import { ParticipantConfirmationStatus, Split, SplitStatus } from "../types";
+
+function deriveSplitStatus(split: Split): SplitStatus {
+  const balances = Array.isArray(split.balances) ? split.balances : [];
+  const confirmations = split.participantConfirmations ?? {};
+  const confirmationValues = Object.values(confirmations);
+
+  if (balances.length > 0 && balances.every((entry) => entry.settled)) {
+    return "settled";
+  }
+  if (confirmationValues.some((v) => v === "disputed")) {
+    return "disputed";
+  }
+  if (confirmationValues.some((v) => v === "pending")) {
+    return "pending";
+  }
+  return "active";
+}
+
+function normalizeSplit(split: Split): Split {
+  return {
+    ...split,
+    status: deriveSplitStatus(split),
+  };
+}
 
 export function useSplits() {
   const [splits, setSplits] = useState<Split[]>([]);
@@ -10,8 +34,9 @@ export function useSplits() {
     setLoading(true);
     try {
       const data = await storage.getSplits();
-      setSplits(data);
-      return data;
+      const normalized = data.map(normalizeSplit);
+      setSplits(normalized);
+      return normalized;
     } catch {
       setSplits([]);
       return [];
@@ -25,21 +50,23 @@ export function useSplits() {
   }, [refresh]);
 
   const addSplit = useCallback(async (split: Split) => {
-    const next = await storage.updateSplits((current) => [split, ...current]);
-    setSplits(next);
+    const normalized = normalizeSplit(split);
+    const next = await storage.updateSplits((current) => [normalized, ...current]);
+    setSplits(next.map(normalizeSplit));
   }, []);
 
   const updateSplit = useCallback(async (splitId: string, updater: (split: Split) => Split) => {
     const next = await storage.updateSplits((current) =>
-      current.map((split) => (split.id === splitId ? updater(split) : split))
+      current.map((split) => (split.id === splitId ? normalizeSplit(updater(split)) : split))
     );
-    setSplits(next);
+    setSplits(next.map(normalizeSplit));
   }, []);
 
   const markBalanceSettled = useCallback(async (splitId: string, balanceId: string) => {
     const current = await storage.getSplits();
     const split = current.find((s) => s.id === splitId);
     if (!split) return false;
+
     const balances = Array.isArray(split.balances) ? split.balances : [];
     const target = balances.find((b) => b.id === balanceId);
     if (!target || target.settled) return false;
@@ -47,22 +74,45 @@ export function useSplits() {
     const nextBalances = balances.map((entry) =>
       entry.id === balanceId ? { ...entry, settled: true } : entry
     );
-    const status: SplitStatus = nextBalances.every((entry) => entry.settled) ? "settled" : "active";
-    const updatedSplit = { ...split, balances: nextBalances, status };
+
+    const updatedSplit = normalizeSplit({
+      ...split,
+      balances: nextBalances,
+    });
     const next = current.map((s) => (s.id === splitId ? updatedSplit : s));
     await storage.setSplits(next);
-    setSplits(next);
+    setSplits(next.map(normalizeSplit));
     return true;
   }, []);
 
+  const setParticipantConfirmation = useCallback(
+    async (splitId: string, participantId: string, status: ParticipantConfirmationStatus) => {
+      const current = await storage.getSplits();
+      const split = current.find((s) => s.id === splitId);
+      if (!split) return false;
+
+      const confirmations = {
+        ...(split.participantConfirmations ?? {}),
+        [participantId]: status,
+      };
+
+      const updatedSplit = normalizeSplit({
+        ...split,
+        participantConfirmations: confirmations,
+      });
+      const next = current.map((s) => (s.id === splitId ? updatedSplit : s));
+      await storage.setSplits(next);
+      setSplits(next.map(normalizeSplit));
+      return true;
+    },
+    []
+  );
+
   const activeSplits = useMemo(
-    () => splits.filter((split) => split.status === "active"),
+    () => splits.filter((split) => split.status === "active" || split.status === "pending" || split.status === "disputed"),
     [splits]
   );
-  const settledSplits = useMemo(
-    () => splits.filter((split) => split.status === "settled"),
-    [splits]
-  );
+  const settledSplits = useMemo(() => splits.filter((split) => split.status === "settled"), [splits]);
 
   return {
     loading,
@@ -73,5 +123,6 @@ export function useSplits() {
     addSplit,
     updateSplit,
     markBalanceSettled,
+    setParticipantConfirmation,
   };
 }
