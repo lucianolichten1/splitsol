@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -189,6 +189,9 @@ export function WalletScreen() {
                   <Text style={styles.refreshBtnText}>{solRefreshing ? "Refreshing…" : "Refresh"}</Text>
                 </Pressable>
               </View>
+              <Text style={styles.faucetHelper}>
+                Need test SOL? Use faucet.solana.com on Devnet, then tap Refresh.
+              </Text>
             </View>
           )}
           {walletError ? <Text style={styles.errorText}>{walletError}</Text> : null}
@@ -399,6 +402,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontWeight: "700",
     fontSize: 12,
+  },
+  faucetHelper: {
+    ...typography.caption,
+    color: colors.textDim,
+    lineHeight: 18,
+    marginTop: layout.titleGap,
   },
   card: {
     backgroundColor: colors.surface,
