@@ -13,6 +13,12 @@ export function ExpenseItem({ expense, participants, currentUserParticipantId }:
   const isYou = currentUserParticipantId && expense.paidBy === currentUserParticipantId;
   const paidLabel = isYou ? "you" : payer?.nickname ?? "Unknown";
 
+  const pct = expense.participantPercents;
+  const splitMeta =
+    expense.splitMode === "percentage" && pct
+      ? `Split: ${participants.map((p) => `${pct[p.id] ?? 0}%`).join(" · ")}`
+      : "Split equally";
+
   return (
     <View style={styles.row}>
       <View style={styles.accentRule} />
@@ -21,6 +27,7 @@ export function ExpenseItem({ expense, participants, currentUserParticipantId }:
           {expense.description}
         </Text>
         <Text style={styles.meta}>Paid by {paidLabel}</Text>
+        <Text style={styles.metaSplit}>{splitMeta}</Text>
       </View>
       <Text style={styles.amount}>{expense.amount.toFixed(2)}</Text>
     </View>
@@ -61,6 +68,12 @@ const styles = StyleSheet.create({
   meta: {
     ...typography.caption,
     fontSize: 12,
+  },
+  metaSplit: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.textMuted,
+    fontStyle: "italic",
   },
   amount: {
     ...typography.subhead,

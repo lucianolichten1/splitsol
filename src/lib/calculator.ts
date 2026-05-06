@@ -4,6 +4,42 @@ function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+/** Per-participant owed share of the expense (before crediting payer). */
+export function expenseSharesForParticipants(
+  expense: Expense,
+  participants: Participant[]
+): Record<string, number> {
+  const n = participants.length;
+  if (n === 0) return {};
+
+  if (!expense.splitMode || expense.splitMode === "equal") {
+    const per = expense.amount / n;
+    return Object.fromEntries(participants.map((p) => [p.id, per]));
+  }
+
+  const pctMap = expense.participantPercents ?? {};
+  const weights = participants.map((p) => Math.max(0, pctMap[p.id] ?? 0));
+  const sumW = weights.reduce((a, b) => a + b, 0);
+  if (sumW <= 0) {
+    const per = expense.amount / n;
+    return Object.fromEntries(participants.map((p) => [p.id, per]));
+  }
+
+  const ids = participants.map((p) => p.id);
+  let assigned = 0;
+  const shares: Record<string, number> = {};
+  ids.forEach((id, i) => {
+    if (i === ids.length - 1) {
+      shares[id] = round2(expense.amount - assigned);
+    } else {
+      const s = round2((expense.amount * weights[i]) / sumW);
+      shares[id] = s;
+      assigned += s;
+    }
+  });
+  return shares;
+}
+
 /** Net balance per participant: positive = owed money, negative = owes money. */
 export function computeParticipantNets(
   participants: Participant[],
@@ -23,9 +59,9 @@ export function computeParticipantNets(
   );
 
   validExpenses.forEach((expense) => {
-    const share = expense.amount / participants.length;
+    const shares = expenseSharesForParticipants(expense, participants);
     participants.forEach((p) => {
-      net[p.id] -= share;
+      net[p.id] -= shares[p.id] ?? 0;
     });
     net[expense.paidBy] += expense.amount;
   });
@@ -114,4 +150,17 @@ export function assertCalculatorExamples(): void {
   if (s.length !== 2) throw new Error(`Example D: expected 2 settlements`);
   const meOwesAlice = s.find((x) => x.from === "me" && x.to === "alice");
   if (!meOwesAlice || meOwesAlice.amount !== 30) throw new Error(`Example D: Me→Alice $30`);
+
+  const pctExpense: Expense = {
+    id: "e-pct",
+    description: "pct",
+    amount: 100,
+    paidBy: "me",
+    splitMode: "percentage",
+    participantPercents: { me: 30, friend: 70 },
+  };
+  s = computeSettlements(participants, [pctExpense]);
+  if (s.length !== 1 || s[0].from !== "friend" || s[0].to !== "me" || s[0].amount !== 70) {
+    throw new Error(`Example E: expected Friend→Me $70 for 30/70 split, got ${JSON.stringify(s)}`);
+  }
 }
