@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
+import { formatUsd } from "../lib/formatMoney";
 import { Expense, Participant } from "../types";
 
 type Props = {
@@ -29,7 +30,10 @@ export function ExpenseItem({ expense, participants, currentUserParticipantId }:
         <Text style={styles.meta}>Paid by {paidLabel}</Text>
         <Text style={styles.metaSplit}>{splitMeta}</Text>
       </View>
-      <Text style={styles.amount}>{expense.amount.toFixed(2)}</Text>
+      <View style={styles.amountCol}>
+        <Text style={styles.amount}>{formatUsd(expense.amount)}</Text>
+        <Text style={styles.amountUsd}>USD</Text>
+      </View>
     </View>
   );
 }
@@ -75,10 +79,20 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontStyle: "italic",
   },
+  amountCol: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
   amount: {
     ...typography.subhead,
     fontSize: 18,
     fontWeight: "700",
     color: colors.accent,
+  },
+  amountUsd: {
+    ...typography.caption,
+    fontSize: 10,
+    fontWeight: "700",
+    color: colors.textDim,
   },
 });

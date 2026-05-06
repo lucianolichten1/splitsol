@@ -175,7 +175,7 @@ export function AddExpensesScreen({ route, navigation }: Props) {
     if (Number.isNaN(parsed) || parsed <= 0) {
       Alert.alert(
         "Amount must be greater than 0",
-        "Enter a positive number for how much was paid (decimals are OK)."
+        "Enter a positive USD amount for how much was paid (decimals are OK)."
       );
       return;
     }
@@ -227,6 +227,9 @@ export function AddExpensesScreen({ route, navigation }: Props) {
                   Group · {groupName}
                 </Text>
               ) : null}
+              <Text style={styles.usdCallout}>
+                All expense amounts are US dollars (USD). Splits and balances use these dollar amounts.
+              </Text>
               <Text style={[styles.label, styles.labelFirst]}>Description</Text>
               <Text style={styles.fieldHint}>Optional: what was purchased or shared?</Text>
               <TextInput
@@ -237,12 +240,14 @@ export function AddExpensesScreen({ route, navigation }: Props) {
                 style={styles.input}
               />
 
-              <Text style={styles.label}>Amount</Text>
-              <Text style={styles.fieldHint}>Total paid on this line (must be greater than 0).</Text>
+              <Text style={styles.label}>Amount (USD)</Text>
+              <Text style={styles.fieldHint}>
+                Total paid on this line in US dollars (must be greater than 0).
+              </Text>
               <TextInput
                 value={amount}
                 onChangeText={setAmount}
-                placeholder="0.00"
+                placeholder="e.g. 24.50 (USD)"
                 placeholderTextColor={colors.textDim}
                 style={styles.input}
                 keyboardType="decimal-pad"
@@ -251,8 +256,8 @@ export function AddExpensesScreen({ route, navigation }: Props) {
 
               <Text style={styles.label}>Split this expense</Text>
               <Text style={styles.fieldHint}>
-                Equal divides the amount across everyone. Percentage sets each person's share of the total (must add up
-                to 100%).
+                Equal divides the USD amount across everyone. Percentage sets each person&apos;s share of the total
+                (must add up to 100%).
               </Text>
               <View style={styles.splitModeRow}>
                 <Pressable
@@ -554,6 +559,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: spacing.sm,
     fontSize: 13,
+  },
+  usdCallout: {
+    ...typography.caption,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.text,
+    fontWeight: "600",
+    backgroundColor: colors.accentMuted,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
   },
   fieldHint: {
     ...typography.caption,

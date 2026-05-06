@@ -2,7 +2,10 @@ import { useCallback, useState } from "react";
 import { Platform } from "react-native";
 import { transact } from "@solana-mobile/mobile-wallet-adapter-protocol-web3js";
 import { MWA_APP_IDENTITY } from "../lib/mwaAppIdentity";
+import { ONCHAIN_PAY_DISABLED_MESSAGE, ONCHAIN_PAYMENTS_ENABLED } from "../lib/solPaymentPolicy";
 import { base64MwAddressToBase58 } from "../lib/solanaAddress";
+import { LAMPORTS_PER_SOL, sendDevnetSolTransfer } from "../lib/sendDevnetSol";
+import { mapSendSolError } from "../lib/sendSolPaymentErrors";
 import { storage } from "../lib/storage";
 import { mapWalletConnectError } from "../lib/walletConnectErrors";
 import type { UserProfile } from "../types";
@@ -76,6 +79,35 @@ export function useWallet(updateProfile: WalletProfileUpdater) {
     }
   }, [updateProfile]);
 
+  const sendSolTransaction = useCallback(
+    async (
+      params: { toAddress: string; amountSol: number }
+    ): Promise<{ ok: true; signature: string } | { ok: false; error: string }> => {
+      if (Platform.OS !== "android") {
+        return { ok: false, error: "Pay with Solana is only available on Android." };
+      }
+      if (!ONCHAIN_PAYMENTS_ENABLED) {
+        return { ok: false, error: ONCHAIN_PAY_DISABLED_MESSAGE };
+      }
+      const lamports = Math.round(params.amountSol * LAMPORTS_PER_SOL);
+      if (!Number.isFinite(lamports) || lamports < 1) {
+        return { ok: false, error: "This amount is too small to send on-chain." };
+      }
+      try {
+        const token = await storage.getWalletAuthToken();
+        const signature = await sendDevnetSolTransfer({
+          toAddressBase58: params.toAddress.trim(),
+          lamports,
+          authToken: token,
+        });
+        return { ok: true, signature };
+      } catch (e) {
+        return { ok: false, error: mapSendSolError(e) };
+      }
+    },
+    []
+  );
+
   return {
     connecting,
     disconnecting,
@@ -83,5 +115,6 @@ export function useWallet(updateProfile: WalletProfileUpdater) {
     clearWalletError,
     connect,
     disconnect,
+    sendSolTransaction,
   };
 }

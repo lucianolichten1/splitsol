@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, layout, radius, shadows, typography } from "../constants/theme";
+import { formatUsd } from "../lib/formatMoney";
 import { Split } from "../types";
 
 type Props = {
@@ -10,9 +11,9 @@ type Props = {
 };
 
 function formatBalanceEffect(net: number): string {
-  if (Math.abs(net) < 0.005) return "$0.00";
-  if (net > 0) return `+ $${net.toFixed(2)}`;
-  return `- $${Math.abs(net).toFixed(2)}`;
+  if (Math.abs(net) < 0.005) return formatUsd(0);
+  if (net > 0) return `+ ${formatUsd(net)}`;
+  return `- ${formatUsd(Math.abs(net))}`;
 }
 
 export function SplitCard({ split, onPress, viewerNet }: Props) {
@@ -34,7 +35,8 @@ export function SplitCard({ split, onPress, viewerNet }: Props) {
           {split.name}
         </Text>
         <View style={styles.amountCol}>
-          <Text style={styles.totalAmount}>${totalAmount.toFixed(2)}</Text>
+          <Text style={styles.totalAmount}>{formatUsd(totalAmount)}</Text>
+          <Text style={styles.totalUsdHint}>USD total</Text>
           {viewerNet !== undefined ? (
             <Text
               style={[
@@ -139,6 +141,13 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: colors.text,
     letterSpacing: -0.4,
+  },
+  totalUsdHint: {
+    ...typography.caption,
+    fontSize: 10,
+    color: colors.textDim,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   balanceEffect: {
     ...typography.caption,

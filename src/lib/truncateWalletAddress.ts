@@ -3,3 +3,7 @@ export function truncateWalletAddress(addr: string): string {
   if (t.length <= 14) return t;
   return `${t.slice(0, 6)}…${t.slice(-4)}`;
 }
+
+export function truncateTxSignature(sig: string): string {
+  return truncateWalletAddress(sig);
+}

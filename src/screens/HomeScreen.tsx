@@ -49,7 +49,9 @@ export function HomeScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.summary}>
         <Text style={styles.summaryTitle}>Your balance · active splits only</Text>
-        <Text style={styles.summaryHint}>Net of what you owe vs. what you’re owed across open splits.</Text>
+        <Text style={styles.summaryHint}>
+          Net of what you owe vs. what you&apos;re owed across open splits (US dollars).
+        </Text>
         {profileLoading && !profile ? (
           <ActivityIndicator
             style={styles.summaryLoading}

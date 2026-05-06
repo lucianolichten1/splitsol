@@ -243,7 +243,10 @@ export function CreateSplitScreen({ navigation, route }: Props) {
         keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <Text style={styles.intro}>Create a transaction from a saved group or directly with friends.</Text>
+          <Text style={styles.intro}>
+            Create a transaction from a saved group or directly with friends. On the next step you&apos;ll add expenses
+            in US dollars (USD).
+          </Text>
 
           <Text style={[styles.label, styles.labelFirst]}>1 · Transaction type</Text>
           <View style={styles.modeRow}>

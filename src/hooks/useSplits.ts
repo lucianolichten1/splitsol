@@ -62,6 +62,29 @@ export function useSplits() {
     setSplits(next.map(normalizeSplit));
   }, []);
 
+  const markBalancePaidOnChain = useCallback(async (splitId: string, balanceId: string, txHash: string) => {
+    const current = await storage.getSplits();
+    const split = current.find((s) => s.id === splitId);
+    if (!split) return false;
+
+    const balances = Array.isArray(split.balances) ? split.balances : [];
+    const target = balances.find((b) => b.id === balanceId);
+    if (!target || target.settled) return false;
+
+    const nextBalances = balances.map((entry) =>
+      entry.id === balanceId ? { ...entry, settled: true, txHash } : entry
+    );
+
+    const updatedSplit = normalizeSplit({
+      ...split,
+      balances: nextBalances,
+    });
+    const next = current.map((s) => (s.id === splitId ? updatedSplit : s));
+    await storage.setSplits(next);
+    setSplits(next.map(normalizeSplit));
+    return true;
+  }, []);
+
   const markBalanceSettled = useCallback(async (splitId: string, balanceId: string) => {
     const current = await storage.getSplits();
     const split = current.find((s) => s.id === splitId);
@@ -123,6 +146,7 @@ export function useSplits() {
     addSplit,
     updateSplit,
     markBalanceSettled,
+    markBalancePaidOnChain,
     setParticipantConfirmation,
   };
 }

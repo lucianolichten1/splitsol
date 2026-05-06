@@ -8,6 +8,7 @@ import { useProfile } from "../hooks/useProfile";
 import { useSplits } from "../hooks/useSplits";
 import { useWallet } from "../hooks/useWallet";
 import { resolveCurrentUserParticipantId } from "../lib/currentUserParticipant";
+import { formatUsd } from "../lib/formatMoney";
 import { truncateWalletAddress } from "../lib/truncateWalletAddress";
 
 function formatSolDisplay(sol: number): string {
@@ -131,18 +132,18 @@ export function WalletScreen() {
 
         <View style={styles.balanceCard}>
           <View style={styles.balanceInner}>
-            <Text style={styles.balanceLabel}>net balance</Text>
+            <Text style={styles.balanceLabel}>Local split balance (USD)</Text>
             <Text style={[styles.balanceBig, stats.net < 0 && styles.balanceBigNegative]}>
-              {stats.net >= 0 ? `+ $${stats.net.toFixed(2)}` : `- $${Math.abs(stats.net).toFixed(2)}`}
+              {stats.net >= 0 ? `+ ${formatUsd(stats.net)}` : `- ${formatUsd(Math.abs(stats.net))}`}
             </Text>
             <View style={styles.balanceSplitRow}>
               <View style={styles.balanceSplitItem}>
-                <Text style={styles.balanceSplitLabel}>you are owed</Text>
-                <Text style={styles.balanceSplitValue}>+ ${stats.owed.toFixed(0)}</Text>
+                <Text style={styles.balanceSplitLabel}>Money owed to you</Text>
+                <Text style={styles.balanceSplitValue}>+ {formatUsd(stats.owed)}</Text>
               </View>
               <View style={styles.balanceSplitItem}>
-                <Text style={styles.balanceSplitLabel}>you owe</Text>
-                <Text style={styles.balanceSplitValue}>- ${stats.owe.toFixed(0)}</Text>
+                <Text style={styles.balanceSplitLabel}>You owe</Text>
+                <Text style={styles.balanceSplitValue}>- {formatUsd(stats.owe)}</Text>
               </View>
             </View>
           </View>
@@ -165,7 +166,7 @@ export function WalletScreen() {
             </>
           ) : (
             <View style={styles.solBlock}>
-              <Text style={styles.muted}>Devnet SOL</Text>
+              <Text style={styles.muted}>Devnet SOL balance</Text>
               {solLoading && solBalance === null && !solError ? (
                 <View style={styles.solLoadingRow}>
                   <ActivityIndicator size="small" color={colors.accentStrong} accessibilityLabel="Loading devnet balance" />
