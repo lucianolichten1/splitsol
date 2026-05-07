@@ -118,3 +118,100 @@ src/
   screens/          Main app screens
   types/            TypeScript data models
 ```
+
+## Key Data Models
+
+SplitSol currently uses local storage for the hackathon MVP.
+
+Main models include:
+
+- `UserProfile`
+- `Friend`
+- `Group`
+- `Participant`
+- `Split`
+- `Expense`
+- `BalanceEntry`
+- `ParticipantConfirmationStatus`
+
+Data is stored locally using AsyncStorage. A future production version would move this data to a backend database so multiple users can share groups, transactions, confirmations, and settlements in real time.
+
+## Local Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the dev server:
+
+```bash
+npx expo start --dev-client
+```
+
+For LAN testing on a physical device:
+
+```bash
+npx expo start --dev-client --lan --clear
+```
+
+## Android Development Build
+
+Because Solana Mobile Wallet Adapter requires native Android support, use a custom development build.
+
+Configure EAS:
+
+```bash
+eas build:configure
+```
+
+Create an Android development build:
+
+```bash
+eas build --profile development --platform android
+```
+
+Install the generated build on the Android device or Solana Seeker, then run:
+
+```bash
+npx expo start --dev-client --lan --clear
+```
+
+## Solana Demo Notes
+
+- SplitSol currently uses Solana devnet.
+- Demo amounts should be small, such as `0.01 SOL` or `0.02 SOL`.
+- The connected wallet must be on devnet.
+- Recipient friends must have a valid devnet wallet address saved before creating the transaction.
+- Mainnet SOL will not appear in the devnet balance.
+
+## Current Limitations
+
+- Data is local to the device.
+- There is no backend database yet.
+- Push notifications are not implemented yet.
+- QR friend/group sharing is not implemented yet.
+- Expenses are entered directly in SOL for the hackathon demo.
+- USD-to-SOL conversion is planned for a future production version.
+
+## Future Roadmap
+
+- Supabase database for shared profiles, friends, groups, and transactions
+- Real multi-user group collaboration
+- Push notifications for new transactions and disputes
+- QR codes for adding friends or joining groups
+- USD input with SOL or USDC settlement conversion
+- Production-ready Solana payment flow
+- Solana dApp Store readiness
+
+## Hackathon Submission
+
+SplitSol was built for the EasyA Consensus Miami Hackathon - Solana Mobile Track: Build for the dApp Store.
+
+The project demonstrates a mobile-first crypto expense-sharing experience using Solana Mobile Wallet Adapter and devnet on-chain settlement.
+
+## Author
+
+Luciano Lichtenfeld  
+University of South Florida
