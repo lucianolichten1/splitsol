@@ -8,9 +8,6 @@ Built for the **EasyA Consensus Miami Hackathon - Solana Mobile Track: Build for
 
 [Watch the demo video here](https://www.loom.com/share/cd162aa1689f4665bfcf7854bb97dafb?t=4)
 
-## Walkthrough Video with Audio
-
-[Watch the full project walkthrough here](https://www.loom.com/share/cd162aa1689f4665bfcf7854bb97dafb?t=4)
 
 This video explains:
 
