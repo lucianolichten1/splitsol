@@ -1,16 +1,120 @@
 # SplitSol
 
-Mobile-first expense splitting (React Native / Expo). Phase 1 uses local state and AsyncStorage; Phase 2 adds Solana settlement. See **PRD.md** for product scope and **PHASE_1_5_CHECKPOINT.md** for a stable implementation snapshot.
+SplitSol is a mobile-first expense-sharing app built for the Solana Mobile Track at the EasyA Consensus Miami Hackathon.
 
-## Development
+The app helps users add friends, create groups or direct transactions, record shared expenses, calculate who owes who, and settle balances on-chain using Solana Mobile Wallet Adapter.
 
-```bash
-npm install
-npx expo start
-```
+## Overview
 
-Typecheck:
+Splitting expenses with friends is often messy. Someone pays for dinner, someone else pays for an Uber, and later everyone has to figure out who owes who.
 
-```bash
-npx tsc --noEmit
+SplitSol solves this by giving users a mobile-first way to:
+
+- Add friends
+- Create groups
+- Create direct transactions
+- Add shared expenses
+- Calculate net balances
+- Accept or dispute transaction participation
+- Connect a Solana wallet
+- View devnet SOL balance
+- Settle balances on-chain through Solana
+
+For the hackathon demo, transaction amounts are entered directly in SOL so the full on-chain settlement flow can be shown clearly on devnet.
+
+## Built for Solana Mobile
+
+SplitSol is designed for the Solana Mobile ecosystem and tested on a Solana Seeker device.
+
+The app integrates:
+
+- Solana Mobile Wallet Adapter for wallet connection and signing
+- Solana devnet for demo payments
+- `@solana/web3.js` for balance fetching, transaction building, and confirmation
+- Android custom development build for native wallet support
+
+Expo Go is not used for the Solana wallet features because Mobile Wallet Adapter requires native Android functionality. SplitSol uses a custom Expo development build.
+
+## Main Features
+
+### Friends & Groups
+
+Users can manage the people they split with.
+
+- Add friends
+- Create groups
+- Edit groups
+- Add saved friends or manual members to groups
+- Create transactions from groups
+
+### Transactions
+
+Users can create and manage shared expenses.
+
+- Create group transactions
+- Create direct transactions without a group
+- Add expenses
+- Select who paid
+- Calculate balances automatically
+- View who owes who
+- Accept or dispute participation
+- Mark balances as settled locally
+- Pay eligible balances on-chain
+
+### Wallet
+
+Users can connect their Solana wallet and view wallet-related information.
+
+- Connect wallet through Mobile Wallet Adapter
+- Display connected wallet address
+- View devnet SOL balance
+- Refresh wallet balance
+- Use wallet for on-chain settlement
+
+### Profile
+
+Users can manage their local identity.
+
+- Display name
+- Username
+- User ID
+- Connected wallet address
+- Edit profile
+
+## Demo Flow
+
+A simple demo scenario:
+
+1. Open SplitSol on the Seeker.
+2. Connect a Solana wallet.
+3. Add a friend with a valid devnet wallet address.
+4. Create a direct transaction with that friend.
+5. Add an expense, for example `0.02 SOL` paid by the friend.
+6. SplitSol calculates that the current user owes `0.01 SOL`.
+7. The user taps Pay on-chain.
+8. The wallet signs the transaction through Mobile Wallet Adapter.
+9. SplitSol confirms the transaction, saves the transaction hash, and marks the balance as settled.
+
+## Tech Stack
+
+- React Native
+- Expo
+- TypeScript
+- EAS Build
+- Solana Mobile Wallet Adapter
+- `@solana/web3.js`
+- AsyncStorage
+- Solana devnet
+
+## Project Structure
+
+```text
+src/
+  components/       Reusable UI components
+  constants/        Shared app constants
+  hooks/            App state and wallet hooks
+  lib/              Core helpers and Solana utilities
+  navigation/       App navigation stacks and tabs
+  screens/          Main app screens
+  types/            TypeScript data models
 ```
