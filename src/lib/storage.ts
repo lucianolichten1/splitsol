@@ -10,6 +10,9 @@ const KEYS = {
   /** MWA auth token for silent re-authorize; local only */
   walletAuthToken: "splitsol:walletAuthToken",
 } as const;
+const LEGACY_KEYS = {
+  rewards: "splitsol:rewards",
+} as const;
 
 async function getJSON<T>(key: string, fallback: T): Promise<T> {
   const raw = await AsyncStorage.getItem(key);
@@ -38,6 +41,7 @@ async function updateJSON<T>(
 
 export const storage = {
   keys: KEYS,
+  legacyKeys: LEGACY_KEYS,
   getSplits: () => getJSON<Split[]>(KEYS.splits, []),
   setSplits: (splits: Split[]) => setJSON(KEYS.splits, splits),
   updateSplits: (updater: (splits: Split[]) => Split[]) =>
@@ -76,5 +80,21 @@ export const storage = {
   },
   clearWalletAuthToken: async (): Promise<void> => {
     await AsyncStorage.removeItem(KEYS.walletAuthToken);
+  },
+  /**
+   * Clears only SplitSol-owned local keys, then recreates default profile.
+   */
+  clearLocalData: async (): Promise<UserProfile> => {
+    await AsyncStorage.multiRemove([
+      KEYS.profile,
+      KEYS.friends,
+      KEYS.groups,
+      KEYS.splits,
+      KEYS.walletAuthToken,
+      LEGACY_KEYS.rewards,
+    ]);
+    const created = createDefaultUserProfile();
+    await setJSON(KEYS.profile, created);
+    return created;
   },
 };

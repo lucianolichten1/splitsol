@@ -130,7 +130,12 @@ export function WalletScreen() {
         <Text style={styles.title}>Wallet</Text>
         <Text style={styles.subtitle}>dashboard + local finance</Text>
 
-        <View style={styles.balanceCard}>
+        <View
+          style={[
+            styles.balanceCard,
+            stats.net < 0 ? styles.balanceCardNegative : styles.balanceCardPositive,
+          ]}
+        >
           <View style={styles.balanceInner}>
             <Text style={styles.balanceLabel}>Local split balance (USD)</Text>
             <Text style={[styles.balanceBig, stats.net < 0 && styles.balanceBigNegative]}>
@@ -228,27 +233,8 @@ export function WalletScreen() {
           )}
         </View>
 
-        <Text style={styles.sectionTitle}>The numbers</Text>
-        <View style={styles.grid}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricNumberSmall}>{stats.active}</Text>
-            <Text style={styles.metricLabel}>active</Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricNumberSmall}>{stats.pending}</Text>
-            <Text style={styles.metricLabel}>pending</Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricNumberSmall}>{stats.disputed}</Text>
-            <Text style={styles.metricLabel}>disputed</Text>
-          </View>
-          <View style={[styles.metricCard, styles.metricWideFull]}>
-            <Text style={styles.metricNumberSmall}>{stats.settled}</Text>
-            <Text style={styles.metricLabel}>settled - all time</Text>
-          </View>
-        </View>
-
         <View style={styles.card}>
+          <Text style={styles.sectionTitle}>On-chain payments</Text>
           <Text style={styles.sectionSub}>Solana (placeholder)</Text>
           <Text style={styles.muted}>on-chain payments + history are coming in Phase 2</Text>
         </View>
@@ -288,10 +274,15 @@ const styles = StyleSheet.create({
   title: { ...typography.screenTitle },
   subtitle: { ...typography.caption, color: colors.textMuted, marginTop: -layout.titleGap, fontStyle: "italic" },
   balanceCard: {
-    backgroundColor: colors.accent,
     borderRadius: radius.xl,
     padding: layout.cardPadding,
     ...shadows.card,
+  },
+  balanceCardPositive: {
+    backgroundColor: colors.success,
+  },
+  balanceCardNegative: {
+    backgroundColor: colors.warning,
   },
   balanceInner: {
     gap: layout.stack,
@@ -420,24 +411,9 @@ const styles = StyleSheet.create({
     gap: layout.stack,
     ...shadows.cardSubtle,
   },
-  sectionTitle: { ...typography.heading, fontSize: 36, fontWeight: "500", marginTop: layout.stack },
+  sectionTitle: { ...typography.heading, fontSize: 32, fontWeight: "500", marginTop: layout.titleGap },
   sectionSub: { ...typography.overline, fontSize: 10 },
   muted: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: layout.listGap },
-  metricCard: {
-    width: "31%",
-    minHeight: touch.minHeight + 24,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderStyle: "dashed",
-    borderRadius: radius.lg,
-    padding: layout.cardPaddingDense,
-    justifyContent: "center",
-  },
-  metricWideFull: { width: "100%", minHeight: touch.minHeight },
-  metricNumberSmall: { ...typography.heading, color: colors.text, fontSize: 34, fontWeight: "500" },
-  metricLabel: { ...typography.caption, color: colors.textMuted, marginTop: 2, fontStyle: "italic" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: layout.inline },
   chip: {
     borderWidth: 1,

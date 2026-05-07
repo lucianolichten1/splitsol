@@ -1,10 +1,11 @@
-import { useCallback } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, layout, radius, shadows, touch, typography } from "../constants/theme";
 import { useProfile } from "../hooks/useProfile";
+import { storage } from "../lib/storage";
 import { truncateWalletAddress } from "../lib/truncateWalletAddress";
 import { ProfileStackParamList } from "../navigation/profileStackTypes";
 
@@ -26,6 +27,7 @@ function truncateId(id: string): string {
 
 export function ProfileScreen({ navigation }: Props) {
   const { profile, loading, refreshProfile } = useProfile();
+  const [clearingData, setClearingData] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -40,6 +42,35 @@ export function ProfileScreen({ navigation }: Props) {
       </SafeAreaView>
     );
   }
+
+  const confirmClearLocalData = () => {
+    if (clearingData) return;
+    Alert.alert(
+      "Clear local data?",
+      "This will delete your local profile, friends, groups, transactions, and wallet connection from this device. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear data",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setClearingData(true);
+              try {
+                await storage.clearLocalData();
+                await refreshProfile();
+                Alert.alert("Local data cleared.");
+              } catch {
+                Alert.alert("Could not clear local data", "Please try again.");
+              } finally {
+                setClearingData(false);
+              }
+            })();
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -91,6 +122,26 @@ export function ProfileScreen({ navigation }: Props) {
         <View style={styles.rowCard}>
           <Text style={styles.rowLabel}>Default currency</Text>
           <Text style={styles.rowValueMuted}>USD</Text>
+        </View>
+
+        <Text style={styles.settingsTitle}>Local Data</Text>
+        <View style={styles.rowCard}>
+          <Text style={styles.rowLabel}>Reset local app state</Text>
+          <Text style={styles.rowValueMuted}>Use this to reset the app before creating demo data.</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Clear local data"
+            android_ripple={{ color: "#ff4d4d22" }}
+            disabled={clearingData}
+            style={({ pressed }) => [
+              styles.dangerBtn,
+              pressed && !clearingData && styles.dangerBtnPressed,
+              clearingData && styles.disabledBtn,
+            ]}
+            onPress={confirmClearLocalData}
+          >
+            <Text style={styles.dangerBtnText}>{clearingData ? "Clearing..." : "Clear local data"}</Text>
+          </Pressable>
         </View>
 
         <Pressable
@@ -240,5 +291,29 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 16,
     letterSpacing: 0.2,
+  },
+  dangerBtn: {
+    marginTop: layout.inline,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.error,
+    backgroundColor: colors.warningMuted,
+    minHeight: touch.minHeight,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: layout.cardPadding,
+    paddingVertical: layout.inline,
+  },
+  dangerBtnPressed: {
+    opacity: 0.9,
+  },
+  dangerBtnText: {
+    ...typography.caption,
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.error,
+  },
+  disabledBtn: {
+    opacity: 0.6,
   },
 });
