@@ -1,99 +1,118 @@
 # SplitSol
 
-SplitSol is a mobile-first expense-sharing app built for the Solana Mobile Track at the EasyA Consensus Miami Hackathon.
+SplitSol is a Solana Mobile expense splitter that helps crypto users create groups, track shared costs, calculate who owes who, and settle balances on-chain using wallet signing.
 
-The app helps users add friends, create groups or direct transactions, record shared expenses, calculate who owes who, and settle balances on-chain using Solana Mobile Wallet Adapter.
+Built for the **EasyA Consensus Miami Hackathon - Solana Mobile Track: Build for the dApp Store**.
 
-## Overview
+## Demo Video
 
-Splitting expenses with friends is often messy. Someone pays for dinner, someone else pays for an Uber, and later everyone has to figure out who owes who.
+[Watch the demo video here](https://www.loom.com/share/cd162aa1689f4665bfcf7854bb97dafb?t=4)
 
-SplitSol solves this by giving users a mobile-first way to:
+## Walkthrough Video with Audio
+
+[Watch the full project walkthrough here](https://www.loom.com/share/cd162aa1689f4665bfcf7854bb97dafb?t=4)
+
+This video explains:
+
+- What SplitSol does
+- How the app works
+- How the GitHub repo is structured
+- How Solana Mobile Wallet Adapter is used
+- How the on-chain payment flow works
+- A full demo running on the Seeker phone
+
+## Screenshots
+
+### Friends & Groups
+
+![Friends & Groups](./assets/screenshots/friends-groups.png)
+
+### Transactions
+
+![Transactions](./assets/screenshots/transactions.png)
+
+### Wallet
+
+![Wallet](./assets/screenshots/wallet.png)
+
+### Transaction Detail / Pay On-Chain
+
+![Transaction Detail](./assets/screenshots/transaction-detail.png)
+
+## Problem
+
+Splitting expenses with friends is still messy.
+
+People pay for different things like dinners, Ubers, hotels, trips, and shared purchases. Later, everyone has to figure out:
+
+- Who paid?
+- Who was included?
+- Who owes who?
+- Did everyone agree with the transaction?
+- Did the balance actually get settled?
+
+For crypto users, there should be a mobile-first way to track these shared expenses and settle balances directly from a wallet.
+
+## Solution
+
+SplitSol is a mobile-first expense-sharing app built for Solana Mobile.
+
+Users can:
 
 - Add friends
 - Create groups
 - Create direct transactions
 - Add shared expenses
-- Calculate net balances
-- Accept or dispute transaction participation
+- Automatically calculate balances
+- Accept or dispute participation in a transaction
 - Connect a Solana wallet
 - View devnet SOL balance
-- Settle balances on-chain through Solana
+- Pay eligible balances on-chain
+- Save the transaction hash after settlement
 
 For the hackathon demo, transaction amounts are entered directly in SOL so the full on-chain settlement flow can be shown clearly on devnet.
 
-## Built for Solana Mobile
+## How It Works
 
-SplitSol is designed for the Solana Mobile ecosystem and tested on a Solana Seeker device.
+Example flow:
 
-The app integrates:
+1. User connects a Solana wallet on the Seeker phone.
+2. User adds a friend with a wallet address.
+3. User creates a direct transaction or group transaction.
+4. User adds an expense, such as `0.02 SOL` paid by Alice.
+5. SplitSol calculates that the current user owes Alice `0.01 SOL`.
+6. User taps **Pay on-chain**.
+7. The wallet opens through Mobile Wallet Adapter.
+8. User approves the transaction.
+9. SplitSol confirms the devnet transaction.
+10. The balance is marked as settled and the transaction hash is saved.
 
-- Solana Mobile Wallet Adapter for wallet connection and signing
-- Solana devnet for demo payments
-- `@solana/web3.js` for balance fetching, transaction building, and confirmation
-- Android custom development build for native wallet support
+## Blockchain Interaction
 
-Expo Go is not used for the Solana wallet features because Mobile Wallet Adapter requires native Android functionality. SplitSol uses a custom Expo development build.
+SplitSol uses Solana Mobile Wallet Adapter to connect and sign transactions from a mobile wallet on the Seeker device.
 
-## Main Features
+The blockchain flow works like this:
 
-### Friends & Groups
+1. The user connects their wallet through **Solana Mobile Wallet Adapter**.
+2. SplitSol stores and displays the connected wallet address locally.
+3. The app fetches the wallet's **devnet SOL balance** using `@solana/web3.js`.
+4. When the user pays a balance, SplitSol builds a Solana devnet transfer transaction.
+5. The transaction is sent to the wallet for signing through Mobile Wallet Adapter.
+6. After approval, the transaction is submitted to Solana devnet.
+7. SplitSol confirms the transaction and saves the transaction hash on the balance entry.
+8. The balance row is marked as settled in the app.
 
-Users can manage the people they split with.
+This satisfies the Solana Mobile Track requirement because the app is an Android mobile app that uses the Solana network meaningfully and integrates Mobile Wallet Adapter for wallet signing.
 
-- Add friends
-- Create groups
-- Edit groups
-- Add saved friends or manual members to groups
-- Create transactions from groups
+## Solana Mobile Features Used
 
-### Transactions
-
-Users can create and manage shared expenses.
-
-- Create group transactions
-- Create direct transactions without a group
-- Add expenses
-- Select who paid
-- Calculate balances automatically
-- View who owes who
-- Accept or dispute participation
-- Mark balances as settled locally
-- Pay eligible balances on-chain
-
-### Wallet
-
-Users can connect their Solana wallet and view wallet-related information.
-
-- Connect wallet through Mobile Wallet Adapter
-- Display connected wallet address
-- View devnet SOL balance
-- Refresh wallet balance
-- Use wallet for on-chain settlement
-
-### Profile
-
-Users can manage their local identity.
-
-- Display name
-- Username
-- User ID
-- Connected wallet address
-- Edit profile
-
-## Demo Flow
-
-A simple demo scenario:
-
-1. Open SplitSol on the Seeker.
-2. Connect a Solana wallet.
-3. Add a friend with a valid devnet wallet address.
-4. Create a direct transaction with that friend.
-5. Add an expense, for example `0.02 SOL` paid by the friend.
-6. SplitSol calculates that the current user owes `0.01 SOL`.
-7. The user taps Pay on-chain.
-8. The wallet signs the transaction through Mobile Wallet Adapter.
-9. SplitSol confirms the transaction, saves the transaction hash, and marks the balance as settled.
+- Solana Mobile Wallet Adapter
+- Wallet authorization
+- Wallet signing
+- Solana devnet transactions
+- Devnet balance fetching
+- Android custom development build
+- Tested on Seeker phone
 
 ## Tech Stack
 
@@ -106,112 +125,15 @@ A simple demo scenario:
 - AsyncStorage
 - Solana devnet
 
-## Project Structure
+## Repository Structure
 
 ```text
 src/
   components/       Reusable UI components
   constants/        Shared app constants
   hooks/            App state and wallet hooks
-  lib/              Core helpers and Solana utilities
+  lib/              Core helpers, balance logic, and Solana utilities
   navigation/       App navigation stacks and tabs
   screens/          Main app screens
   types/            TypeScript data models
 ```
-
-## Key Data Models
-
-SplitSol currently uses local storage for the hackathon MVP.
-
-Main models include:
-
-- `UserProfile`
-- `Friend`
-- `Group`
-- `Participant`
-- `Split`
-- `Expense`
-- `BalanceEntry`
-- `ParticipantConfirmationStatus`
-
-Data is stored locally using AsyncStorage. A future production version would move this data to a backend database so multiple users can share groups, transactions, confirmations, and settlements in real time.
-
-## Local Development
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Start the dev server:
-
-```bash
-npx expo start --dev-client
-```
-
-For LAN testing on a physical device:
-
-```bash
-npx expo start --dev-client --lan --clear
-```
-
-## Android Development Build
-
-Because Solana Mobile Wallet Adapter requires native Android support, use a custom development build.
-
-Configure EAS:
-
-```bash
-eas build:configure
-```
-
-Create an Android development build:
-
-```bash
-eas build --profile development --platform android
-```
-
-Install the generated build on the Android device or Solana Seeker, then run:
-
-```bash
-npx expo start --dev-client --lan --clear
-```
-
-## Solana Demo Notes
-
-- SplitSol currently uses Solana devnet.
-- Demo amounts should be small, such as `0.01 SOL` or `0.02 SOL`.
-- The connected wallet must be on devnet.
-- Recipient friends must have a valid devnet wallet address saved before creating the transaction.
-- Mainnet SOL will not appear in the devnet balance.
-
-## Current Limitations
-
-- Data is local to the device.
-- There is no backend database yet.
-- Push notifications are not implemented yet.
-- QR friend/group sharing is not implemented yet.
-- Expenses are entered directly in SOL for the hackathon demo.
-- USD-to-SOL conversion is planned for a future production version.
-
-## Future Roadmap
-
-- Supabase database for shared profiles, friends, groups, and transactions
-- Real multi-user group collaboration
-- Push notifications for new transactions and disputes
-- QR codes for adding friends or joining groups
-- USD input with SOL or USDC settlement conversion
-- Production-ready Solana payment flow
-- Solana dApp Store readiness
-
-## Hackathon Submission
-
-SplitSol was built for the EasyA Consensus Miami Hackathon - Solana Mobile Track: Build for the dApp Store.
-
-The project demonstrates a mobile-first crypto expense-sharing experience using Solana Mobile Wallet Adapter and devnet on-chain settlement.
-
-## Author
-
-Luciano Lichtenfeld  
-University of South Florida
