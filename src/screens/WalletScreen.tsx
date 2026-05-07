@@ -293,10 +293,10 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   balanceBig: {
+    ...typography.heading,
     color: colors.background,
-    fontSize: 44,
-    fontWeight: "700",
-    letterSpacing: -0.8,
+    fontSize: 34,
+    fontWeight: "500",
   },
   balanceBigNegative: {
     color: colors.background,
@@ -314,10 +314,10 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   balanceSplitValue: {
+    ...typography.heading,
     color: colors.background,
-    fontWeight: "700",
+    fontWeight: "500",
     fontSize: 22,
-    letterSpacing: -0.4,
   },
   connectCard: {
     marginTop: 0,
