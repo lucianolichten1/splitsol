@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 import { Platform } from "react-native";
 import { transact } from "@solana-mobile/mobile-wallet-adapter-protocol-web3js";
 import { MWA_APP_IDENTITY } from "../lib/mwaAppIdentity";
-import { ONCHAIN_PAY_DISABLED_MESSAGE, ONCHAIN_PAYMENTS_ENABLED } from "../lib/solPaymentPolicy";
 import { base64MwAddressToBase58 } from "../lib/solanaAddress";
 import { LAMPORTS_PER_SOL, sendDevnetSolTransfer } from "../lib/sendDevnetSol";
 import { mapSendSolError } from "../lib/sendSolPaymentErrors";
@@ -85,9 +84,6 @@ export function useWallet(updateProfile: WalletProfileUpdater) {
     ): Promise<{ ok: true; signature: string } | { ok: false; error: string }> => {
       if (Platform.OS !== "android") {
         return { ok: false, error: "Pay with Solana is only available on Android." };
-      }
-      if (!ONCHAIN_PAYMENTS_ENABLED) {
-        return { ok: false, error: ONCHAIN_PAY_DISABLED_MESSAGE };
       }
       const lamports = Math.round(params.amountSol * LAMPORTS_PER_SOL);
       if (!Number.isFinite(lamports) || lamports < 1) {

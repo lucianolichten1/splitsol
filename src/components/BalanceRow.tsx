@@ -10,6 +10,9 @@ type Props = {
   participants: Participant[];
   currentUserParticipantId?: string | null;
   onMarkSettled?: () => void;
+  walletConnected?: boolean;
+  paying?: boolean;
+  onPayOnChain?: () => void;
   /** Read-only line for "All balances" when actions live in Your payments. */
   referenceOnly?: boolean;
 };
@@ -19,12 +22,18 @@ export function BalanceRow({
   participants,
   currentUserParticipantId,
   onMarkSettled,
+  walletConnected = false,
+  paying = false,
+  onPayOnChain,
   referenceOnly = false,
 }: Props) {
   const line = formatBalanceRowForViewer(entry, participants, currentUserParticipantId ?? null);
   const viewer = currentUserParticipantId ?? null;
   const userOwes =
     Boolean(viewer) && entry.from === viewer && !entry.settled && entry.amount > 0;
+  const recipient = participants.find((p) => p.id === entry.to);
+  const recipientHasWallet = Boolean(recipient?.walletAddress?.trim());
+  const canPayOnChain = userOwes && walletConnected && recipientHasWallet;
   const userIsOwed =
     Boolean(viewer) && entry.to === viewer && !entry.settled && entry.amount > 0;
 
@@ -81,16 +90,34 @@ export function BalanceRow({
       ) : (
         <View style={styles.actions}>
           {userOwes ? (
-            <View style={[styles.paySolBtn, styles.paySolBtnDisabled]}>
-              <Text style={styles.paySolBtnTextDisabled}>{PAY_ONCHAIN_BUTTON_LABEL}</Text>
-              <Text style={styles.paySolSubDisabled}>{payViaSolDisabledSubtext()}</Text>
-            </View>
+            canPayOnChain ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Pay this balance on-chain"
+                android_ripple={{ color: "#14F19533" }}
+                disabled={paying}
+                style={({ pressed }) => [
+                  styles.paySolBtn,
+                  pressed && !paying && styles.paySolBtnPressed,
+                  paying && styles.paySolBtnDisabled,
+                ]}
+                onPress={onPayOnChain}
+              >
+                <Text style={styles.paySolBtnText}>{paying ? "Paying..." : PAY_ONCHAIN_BUTTON_LABEL}</Text>
+              </Pressable>
+            ) : (
+              <View style={[styles.paySolBtn, styles.paySolBtnDisabled]}>
+                <Text style={styles.paySolBtnTextDisabled}>{PAY_ONCHAIN_BUTTON_LABEL}</Text>
+                <Text style={styles.paySolSubDisabled}>{payViaSolDisabledSubtext(walletConnected, recipientHasWallet)}</Text>
+              </View>
+            )
           ) : null}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Mark this balance as settled locally"
             android_ripple={{ color: "#14F19533" }}
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+            disabled={paying}
+            style={({ pressed }) => [styles.button, pressed && !paying && styles.buttonPressed, paying && styles.btnDisabled]}
             onPress={onMarkSettled}
           >
             <Text style={styles.buttonText}>Mark settled</Text>
@@ -196,6 +223,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 13,
   },
+  paySolBtnText: {
+    color: colors.background,
+    fontWeight: "800",
+    fontSize: 13,
+  },
+  paySolBtnPressed: {
+    opacity: 0.9,
+  },
   paySolSubDisabled: {
     ...typography.caption,
     fontSize: 10,
@@ -223,5 +258,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 14,
     letterSpacing: 0.2,
+  },
+  btnDisabled: {
+    opacity: 0.5,
   },
 });

@@ -245,7 +245,7 @@ export function CreateSplitScreen({ navigation, route }: Props) {
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <Text style={styles.intro}>
             Create a transaction from a saved group or directly with friends. On the next step you&apos;ll add expenses
-            in US dollars (USD).
+            in SOL for this demo.
           </Text>
 
           <Text style={[styles.label, styles.labelFirst]}>1 · Transaction type</Text>

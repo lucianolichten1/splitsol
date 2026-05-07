@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
-import { formatUsd } from "../lib/formatMoney";
+import { formatSolAmount } from "../lib/formatMoney";
 import { Expense, Participant } from "../types";
 
 type Props = {
@@ -31,8 +31,8 @@ export function ExpenseItem({ expense, participants, currentUserParticipantId }:
         <Text style={styles.metaSplit}>{splitMeta}</Text>
       </View>
       <View style={styles.amountCol}>
-        <Text style={styles.amount}>{formatUsd(expense.amount)}</Text>
-        <Text style={styles.amountUsd}>USD</Text>
+        <Text style={styles.amount}>{formatSolAmount(expense.amount)}</Text>
+        <Text style={styles.amountUsd}>SOL</Text>
       </View>
     </View>
   );

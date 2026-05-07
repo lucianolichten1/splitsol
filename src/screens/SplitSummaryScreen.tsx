@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -9,19 +9,25 @@ import { YourPaymentRow } from "../components/YourPaymentRow";
 import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
 import { useProfile } from "../hooks/useProfile";
 import { useSplits } from "../hooks/useSplits";
+import { useWallet } from "../hooks/useWallet";
 import { getCurrentUserBalanceSummary } from "../lib/balanceSummary";
 import { resolveCurrentUserParticipantId } from "../lib/currentUserParticipant";
-import { formatUsd } from "../lib/formatMoney";
-import { ONCHAIN_PAY_DISABLED_MESSAGE } from "../lib/solPaymentPolicy";
+import { formatSolAmount } from "../lib/formatMoney";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { BalanceEntry } from "../types";
+import { truncateTxSignature } from "../lib/truncateWalletAddress";
 
 type Props = NativeStackScreenProps<RootStackParamList, "SplitSummary">;
 
 export function SplitSummaryScreen({ route }: Props) {
   const { splitId } = route.params;
-  const { splits, refresh, markBalanceSettled, setParticipantConfirmation, loading } = useSplits();
-  const { profile, refreshProfile } = useProfile();
+  const { splits, refresh, markBalanceSettled, markBalancePaidOnChain, setParticipantConfirmation, loading } =
+    useSplits();
+  const { profile, refreshProfile, updateProfile } = useProfile();
+  const { sendSolTransaction } = useWallet(updateProfile);
+  const [payingBalanceId, setPayingBalanceId] = useState<string | null>(null);
+  const [paymentBanner, setPaymentBanner] = useState<string | null>(null);
+  const walletConnected = Boolean(profile?.mockWalletAddress?.trim());
 
   useFocusEffect(
     useCallback(() => {
@@ -94,6 +100,29 @@ export function SplitSummaryScreen({ route }: Props) {
     await refresh();
   };
 
+  const onPayOnChain = async (balanceEntry: BalanceEntry) => {
+    if (payingBalanceId) return;
+    const recipient = participantsSafe.find((p) => p.id === balanceEntry.to);
+    const to = recipient?.walletAddress?.trim();
+    if (!to) return;
+
+    setPaymentBanner(null);
+    setPayingBalanceId(balanceEntry.id);
+    const result = await sendSolTransaction({ toAddress: to, amountSol: balanceEntry.amount });
+    setPayingBalanceId(null);
+
+    if (!result.ok) {
+      setPaymentBanner(result.error);
+      return;
+    }
+
+    const saved = await markBalancePaidOnChain(split.id, balanceEntry.id, result.signature);
+    await refresh();
+    if (saved) {
+      setPaymentBanner(`On-chain payment confirmed · ${truncateTxSignature(result.signature)}`);
+    }
+  };
+
   const confirmations = split?.participantConfirmations ?? {};
 
   const onSetConfirmation = async (participantId: string, status: "accepted" | "disputed") => {
@@ -129,9 +158,9 @@ export function SplitSummaryScreen({ route }: Props) {
             </Text>
           )}
           <View style={styles.totalBlock}>
-            <Text style={styles.totalLabel}>Total (USD)</Text>
+            <Text style={styles.totalLabel}>Total (SOL)</Text>
             <Text style={styles.totalBig}>
-              {formatUsd(typeof split.totalAmount === "number" ? split.totalAmount : 0)}
+              {formatSolAmount(typeof split.totalAmount === "number" ? split.totalAmount : 0)}
             </Text>
           </View>
           {userBalanceSummary?.label ? (
@@ -146,14 +175,15 @@ export function SplitSummaryScreen({ route }: Props) {
               {userBalanceSummary.label}
             </Text>
           ) : null}
-          <Text style={styles.netHelper}>These are net balances after all expenses (USD).</Text>
+          <Text style={styles.netHelper}>These are net balances after all expenses (SOL).</Text>
         </View>
+        {paymentBanner ? <Text style={styles.listSectionHint}>{paymentBanner}</Text> : null}
 
         <View style={styles.prominentSection}>
           <Text style={styles.prominentSectionTitle}>Your payments</Text>
           <Text style={styles.snapshotNote}>
-            Balances and payments below are in US dollars (USD). Wallet addresses are saved on each participant when
-            this transaction is created. Editing a friend&apos;s wallet later does not update older transactions —
+            Amounts are in SOL for this demo. Wallet addresses are saved on each participant when this transaction is
+            created. Editing a friend&apos;s wallet later does not update older transactions —
             create a new transaction to use an updated address.
           </Text>
           {viewerParticipantId ? (
@@ -167,6 +197,11 @@ export function SplitSummaryScreen({ route }: Props) {
                     entry={entry}
                     participants={participantsSafe}
                     viewerParticipantId={viewerParticipantId}
+                    walletConnected={walletConnected}
+                    paying={payingBalanceId === entry.id}
+                    onPayOnChain={() => {
+                      void onPayOnChain(entry);
+                    }}
                     onMarkSettled={() => onMarkSettled(entry.id)}
                   />
                 ))}
@@ -247,8 +282,7 @@ export function SplitSummaryScreen({ route }: Props) {
         <View style={styles.balancesHeader}>
           <Text style={styles.listSectionTitle}>All balances</Text>
           <Text style={styles.listSectionHint}>
-            Full list for reference. Use Your payments above to mark settled when you owe someone.{" "}
-            {ONCHAIN_PAY_DISABLED_MESSAGE}
+            Full list for reference. Use Your payments above to pay on-chain or mark settled when you owe someone.
           </Text>
         </View>
         {balancesSafe.length === 0 ? (
@@ -261,6 +295,11 @@ export function SplitSummaryScreen({ route }: Props) {
                   entry={item}
                   participants={participantsSafe}
                   currentUserParticipantId={viewerParticipantId}
+                  walletConnected={walletConnected}
+                  paying={payingBalanceId === item.id}
+                  onPayOnChain={() => {
+                    void onPayOnChain(item);
+                  }}
                   referenceOnly={referenceOnlyForBalance(item)}
                   onMarkSettled={() => onMarkSettled(item.id)}
                 />

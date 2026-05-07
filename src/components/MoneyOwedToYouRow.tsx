@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { colors, radius, shadows, spacing, typography } from "../constants/theme";
-import { formatUsd } from "../lib/formatMoney";
+import { formatSolAmount } from "../lib/formatMoney";
 import { BalanceEntry, Participant, ParticipantConfirmationStatus } from "../types";
 
 function displayName(participants: Participant[], id: string): string {
@@ -32,8 +32,8 @@ export function MoneyOwedToYouRow({ entry, participants, participantConfirmation
       <Text style={styles.line}>
         <Text style={styles.nameEmphasis}>{debtorName}</Text> owes you
       </Text>
-      <Text style={styles.amount}>{formatUsd(entry.amount)}</Text>
-      <Text style={styles.amountCaption}>US dollars (USD)</Text>
+      <Text style={styles.amount}>{formatSolAmount(entry.amount)}</Text>
+      <Text style={styles.amountCaption}>SOL</Text>
       <Text style={styles.statusLine}>
         Their confirmation: {theirStatus} · Awaiting payment or local settlement from them
       </Text>

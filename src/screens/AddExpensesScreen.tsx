@@ -175,7 +175,7 @@ export function AddExpensesScreen({ route, navigation }: Props) {
     if (Number.isNaN(parsed) || parsed <= 0) {
       Alert.alert(
         "Amount must be greater than 0",
-        "Enter a positive USD amount for how much was paid (decimals are OK)."
+        "Enter a positive SOL amount for how much was paid (decimals are OK)."
       );
       return;
     }
@@ -227,9 +227,7 @@ export function AddExpensesScreen({ route, navigation }: Props) {
                   Group · {groupName}
                 </Text>
               ) : null}
-              <Text style={styles.usdCallout}>
-                All expense amounts are US dollars (USD). Splits and balances use these dollar amounts.
-              </Text>
+              <Text style={styles.usdCallout}>Enter amounts in SOL for this hackathon demo.</Text>
               <Text style={[styles.label, styles.labelFirst]}>Description</Text>
               <Text style={styles.fieldHint}>Optional: what was purchased or shared?</Text>
               <TextInput
@@ -240,14 +238,14 @@ export function AddExpensesScreen({ route, navigation }: Props) {
                 style={styles.input}
               />
 
-              <Text style={styles.label}>Amount (USD)</Text>
+              <Text style={styles.label}>Amount (SOL)</Text>
               <Text style={styles.fieldHint}>
-                Total paid on this line in US dollars (must be greater than 0).
+                Total paid on this line in SOL (must be greater than 0).
               </Text>
               <TextInput
                 value={amount}
                 onChangeText={setAmount}
-                placeholder="e.g. 24.50 (USD)"
+                placeholder="e.g. 0.02 SOL"
                 placeholderTextColor={colors.textDim}
                 style={styles.input}
                 keyboardType="decimal-pad"
@@ -256,7 +254,7 @@ export function AddExpensesScreen({ route, navigation }: Props) {
 
               <Text style={styles.label}>Split this expense</Text>
               <Text style={styles.fieldHint}>
-                Equal divides the USD amount across everyone. Percentage sets each person&apos;s share of the total
+                Equal divides the SOL amount across everyone. Percentage sets each person&apos;s share of the total
                 (must add up to 100%).
               </Text>
               <View style={styles.splitModeRow}>

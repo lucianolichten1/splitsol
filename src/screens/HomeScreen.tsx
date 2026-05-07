@@ -50,7 +50,7 @@ export function HomeScreen() {
       <View style={styles.summary}>
         <Text style={styles.summaryTitle}>Your balance · active splits only</Text>
         <Text style={styles.summaryHint}>
-          Net of what you owe vs. what you&apos;re owed across open splits (US dollars).
+          Net of what you owe vs. what you&apos;re owed across open splits (SOL).
         </Text>
         {profileLoading && !profile ? (
           <ActivityIndicator

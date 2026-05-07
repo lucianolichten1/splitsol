@@ -8,7 +8,7 @@ import { useProfile } from "../hooks/useProfile";
 import { useSplits } from "../hooks/useSplits";
 import { useWallet } from "../hooks/useWallet";
 import { resolveCurrentUserParticipantId } from "../lib/currentUserParticipant";
-import { formatUsd } from "../lib/formatMoney";
+import { formatSolAmount } from "../lib/formatMoney";
 import { truncateWalletAddress } from "../lib/truncateWalletAddress";
 
 function formatSolDisplay(sol: number): string {
@@ -137,18 +137,18 @@ export function WalletScreen() {
           ]}
         >
           <View style={styles.balanceInner}>
-            <Text style={styles.balanceLabel}>Local split balance (USD)</Text>
+            <Text style={styles.balanceLabel}>Local split balance (SOL)</Text>
             <Text style={[styles.balanceBig, stats.net < 0 && styles.balanceBigNegative]}>
-              {stats.net >= 0 ? `+ ${formatUsd(stats.net)}` : `- ${formatUsd(Math.abs(stats.net))}`}
+              {stats.net >= 0 ? `+ ${formatSolAmount(stats.net)}` : `- ${formatSolAmount(Math.abs(stats.net))}`}
             </Text>
             <View style={styles.balanceSplitRow}>
               <View style={styles.balanceSplitItem}>
                 <Text style={styles.balanceSplitLabel}>Money owed to you</Text>
-                <Text style={styles.balanceSplitValue}>+ {formatUsd(stats.owed)}</Text>
+                <Text style={styles.balanceSplitValue}>+ {formatSolAmount(stats.owed)}</Text>
               </View>
               <View style={styles.balanceSplitItem}>
                 <Text style={styles.balanceSplitLabel}>You owe</Text>
-                <Text style={styles.balanceSplitValue}>- {formatUsd(stats.owe)}</Text>
+                <Text style={styles.balanceSplitValue}>- {formatSolAmount(stats.owe)}</Text>
               </View>
             </View>
           </View>

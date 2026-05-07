@@ -1,7 +1,7 @@
 import { BalanceEntry, Participant, Split, UserProfile } from "../types";
 import { assertCalculatorExamples } from "./calculator";
 import { resolveCurrentUserParticipantId } from "./currentUserParticipant";
-import { formatUsd } from "./formatMoney";
+import { formatSolAmount } from "./formatMoney";
 
 export type CurrentUserBalanceSummary = {
   /** Positive = you are owed money; negative = you owe. */
@@ -43,7 +43,7 @@ export function formatBalanceRowForViewer(
   currentUserParticipantId: string | null
 ): string {
   const list = participants ?? [];
-  return `${balanceEntryCaptionParts(entry, list, currentUserParticipantId)} ${formatUsd(entry.amount)}`;
+  return `${balanceEntryCaptionParts(entry, list, currentUserParticipantId)} ${formatSolAmount(entry.amount)}`;
 }
 
 export function getCurrentUserBalanceSummary(
@@ -81,9 +81,9 @@ export function getCurrentUserBalanceSummary(
   if (Math.abs(rounded) < 0.005) {
     label = "All settled";
   } else if (rounded > 0) {
-    label = `You are owed ${formatUsd(rounded)}`;
+    label = `You are owed ${formatSolAmount(rounded)}`;
   } else {
-    label = `You owe ${formatUsd(-rounded)}`;
+    label = `You owe ${formatSolAmount(-rounded)}`;
   }
 
   return { netAmount: rounded, label, detailRows };
@@ -129,9 +129,9 @@ export function aggregateCurrentUserBalanceAcrossSplits(
     return { netAmount: 0, label: "All settled" };
   }
   if (net > 0) {
-    return { netAmount: net, label: `You are owed ${formatUsd(net)}` };
+    return { netAmount: net, label: `You are owed ${formatSolAmount(net)}` };
   }
-  return { netAmount: net, label: `You owe ${formatUsd(-net)}` };
+  return { netAmount: net, label: `You owe ${formatSolAmount(-net)}` };
 }
 
 /** Dev/manual checks for examples A–D (throws on failure). */

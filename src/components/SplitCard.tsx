@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, layout, radius, shadows, typography } from "../constants/theme";
-import { formatUsd } from "../lib/formatMoney";
+import { formatSolAmount } from "../lib/formatMoney";
 import { Split } from "../types";
 
 type Props = {
@@ -11,9 +11,9 @@ type Props = {
 };
 
 function formatBalanceEffect(net: number): string {
-  if (Math.abs(net) < 0.005) return formatUsd(0);
-  if (net > 0) return `+ ${formatUsd(net)}`;
-  return `- ${formatUsd(Math.abs(net))}`;
+  if (Math.abs(net) < 0.0000005) return formatSolAmount(0);
+  if (net > 0) return `+ ${formatSolAmount(net)}`;
+  return `- ${formatSolAmount(Math.abs(net))}`;
 }
 
 export function SplitCard({ split, onPress, viewerNet }: Props) {
@@ -35,8 +35,8 @@ export function SplitCard({ split, onPress, viewerNet }: Props) {
           {split.name}
         </Text>
         <View style={styles.amountCol}>
-          <Text style={styles.totalAmount}>{formatUsd(totalAmount)}</Text>
-          <Text style={styles.totalUsdHint}>USD total</Text>
+          <Text style={styles.totalAmount}>{formatSolAmount(totalAmount)}</Text>
+          <Text style={styles.totalUsdHint}>SOL total</Text>
           {viewerNet !== undefined ? (
             <Text
               style={[

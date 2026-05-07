@@ -121,7 +121,7 @@ export function ProfileScreen({ navigation }: Props) {
         </View>
         <View style={styles.rowCard}>
           <Text style={styles.rowLabel}>Default currency</Text>
-          <Text style={styles.rowValueMuted}>USD</Text>
+          <Text style={styles.rowValueMuted}>SOL</Text>
         </View>
 
         <Text style={styles.settingsTitle}>Local Data</Text>

@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius, shadows, spacing, touch, typography } from "../constants/theme";
-import { formatUsd } from "../lib/formatMoney";
-import { PAY_ONCHAIN_BUTTON_LABEL, payViaSolDisabledSubtext as onchainPayDisabledHint } from "../lib/solPaymentPolicy";
+import { formatSolAmount } from "../lib/formatMoney";
+import { PAY_ONCHAIN_BUTTON_LABEL, payViaSolDisabledSubtext } from "../lib/solPaymentPolicy";
 import { BalanceEntry, Participant } from "../types";
 
 function displayName(participants: Participant[], id: string): string {
@@ -12,23 +12,35 @@ type Props = {
   entry: BalanceEntry;
   participants: Participant[];
   viewerParticipantId: string;
+  walletConnected: boolean;
+  paying: boolean;
+  onPayOnChain: () => void;
   onMarkSettled: () => void;
 };
 
-export function YourPaymentRow({ entry, participants, viewerParticipantId, onMarkSettled }: Props) {
+export function YourPaymentRow({
+  entry,
+  participants,
+  viewerParticipantId,
+  walletConnected,
+  paying,
+  onPayOnChain,
+  onMarkSettled,
+}: Props) {
   const recipient = participants.find((p) => p.id === entry.to);
   const recipientName = displayName(participants, entry.to);
   const recipientHasWallet = Boolean(recipient?.walletAddress?.trim());
-  const showOnchainPayPlaceholder = !entry.settled && entry.amount > 0;
-  const onchainBlockedHint = onchainPayDisabledHint();
+  const shouldShowPay = !entry.settled && entry.amount > 0;
+  const canPayOnChain = shouldShowPay && walletConnected && recipientHasWallet;
+  const onchainBlockedHint = payViaSolDisabledSubtext(walletConnected, recipientHasWallet);
 
   return (
     <View style={styles.card}>
       <Text style={styles.oweLine}>
         You owe <Text style={styles.nameEmphasis}>{recipientName}</Text>
       </Text>
-      <Text style={styles.amountLine}>{formatUsd(entry.amount)}</Text>
-      <Text style={styles.amountUsdCaption}>Amount owed · US dollars (USD), not crypto.</Text>
+      <Text style={styles.amountLine}>{formatSolAmount(entry.amount)}</Text>
+      <Text style={styles.amountUsdCaption}>Amount owed · SOL (hackathon demo units).</Text>
       <Text style={styles.walletStatus}>
         Recipient wallet (on this transaction): {recipientHasWallet ? "saved" : "missing"}
       </Text>
@@ -44,16 +56,24 @@ export function YourPaymentRow({ entry, participants, viewerParticipantId, onMar
         </Text>
       ) : null}
       <View style={styles.actions}>
-        {showOnchainPayPlaceholder ? (
-          <View
-            style={[styles.payBtn, styles.payBtnDisabled]}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: true }}
-            accessibilityLabel={`You owe ${formatUsd(entry.amount)} in US dollars. ${PAY_ONCHAIN_BUTTON_LABEL} is unavailable. ${onchainBlockedHint}`}
-          >
-            <Text style={styles.payBtnTextDisabled}>{PAY_ONCHAIN_BUTTON_LABEL}</Text>
-            <Text style={styles.payBtnCaption}>{onchainBlockedHint}</Text>
-          </View>
+        {shouldShowPay ? (
+          canPayOnChain ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Pay ${formatSolAmount(entry.amount)} on-chain`}
+              android_ripple={{ color: "#14F19533" }}
+              disabled={paying}
+              style={({ pressed }) => [styles.payBtn, pressed && !paying && styles.payBtnPressed, paying && styles.payBtnDisabled]}
+              onPress={onPayOnChain}
+            >
+              <Text style={styles.payBtnText}>{paying ? "Paying..." : PAY_ONCHAIN_BUTTON_LABEL}</Text>
+            </Pressable>
+          ) : (
+            <View style={[styles.payBtn, styles.payBtnDisabled]}>
+              <Text style={styles.payBtnTextDisabled}>{PAY_ONCHAIN_BUTTON_LABEL}</Text>
+              <Text style={styles.payBtnCaption}>{onchainBlockedHint}</Text>
+            </View>
+          )
         ) : null}
         {!entry.settled ? (
           <Pressable
@@ -136,13 +156,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     gap: spacing.xs,
   },
+  payBtnPressed: {
+    opacity: 0.9,
+  },
   payBtnDisabled: {
     backgroundColor: colors.surfaceMuted,
     borderColor: colors.borderStrong,
-    opacity: 0.9,
+    opacity: 0.85,
   },
   payBtnTextDisabled: {
     color: colors.textMuted,
+    fontWeight: "800",
+    fontSize: 14,
+  },
+  payBtnText: {
+    color: colors.background,
     fontWeight: "800",
     fontSize: 14,
   },
