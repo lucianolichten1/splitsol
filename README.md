@@ -13,10 +13,8 @@ This video explains:
 
 - What SplitSol does
 - How the app works
-- How the GitHub repo is structured
 - How Solana Mobile Wallet Adapter is used
 - How the on-chain payment flow works
-- A full demo running on the Seeker phone
 
 ## Screenshots
 
